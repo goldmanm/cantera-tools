@@ -1,13 +1,12 @@
 import math
 import numpy as np
 from scipy import integrate
-from IPython.display import display, Image
 import cantera as ct
 import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import re
-
+import warnings
 """
 
 
@@ -56,7 +55,85 @@ Running System
 """
 
 
+def append_data_to_df(simulator,solution, df, basics= ['time','temperature','pressure','density'],
+                      add_species = True, species_names='all',
+                      add_rxns = False, reaction_names='all'):
+    """
+    appends the current conditions of a Solution object contianing ReactorNet
+    object (simulator) to the pandas.dataframe object (df). 
+    
+    The optional parameters define what is saved.
+    
+    The following are enabled for the basics conditions:
+    * time
+    * temperature
+    * pressure
+    * density
+    * volume
+    * cp (constant pressure heat capacity)
+    * cv (constant volume heat capacity)
+    """
+    
+    
+    conditions = {}
+    # add regular conditions
+    if 'time' in basics:
+        conditions['time (s)'] = simulator.time
+    if 'temperature' in basics:
+        conditions['temperature (K)'] = solution.T
+    if 'pressure' in basics:
+        conditions['pressure (Pa)'] = solution.P 
+    if 'density' in basics:
+        conditions['density (kmol/m3)'] = solution.density_mole
+    if 'volume' in basics:
+        conditions['volume (m3)'] = solution.volume_mole
+    if 'cp' in basics:
+        conditions['heat capacity, cp (J/kmol/K)'] = solution.cp_mole
+    if 'cv' in basics:
+        conditions['heat capacity, cp (J/kmol/K)'] = solution.cv_mole
+#    if '' in basics:
+#        conditions[''] = solution.
+    # end adding regular conditions
 
+
+    if add_species:
+        if species_names=='all':
+            species_names = solution.species_names
+        mole_fractions = solution.mole_fraction_dict()
+        for name in species_names:
+            try:
+                conditions[name] = mole_fractions[name] * solution.density_mole
+            except KeyError:
+                conditions[name] = 0
+                warnings.warn('%s is not listed in the mole fraction dictionary. If this occurs after the first iteration, you may have typed the species incorrectly')
+    
+    if add_rxns:
+        if reaction_names=='all':
+            reaction_names = solution.reaction_equations()
+            
+        reaction_rates = get_rxn_rate_dict(solution.reaction_equations(),solution.net_rates_of_progress)
+        for name in reaction_names:
+            try:
+                conditions[name] = reaction_rates[name]
+            except KeyError:
+                conditions[name] = 0
+                warnings.warn('%s is not listed in the reaction names. If this occurs after the first iteration, you may have typed the species incorrectly')
+    
+    return df.append(conditions, ignore_index=True)
+
+    
+def get_rxn_rate_dict(reaction_equations, net_rates):
+    """
+    makes a dictionary out of the two inputs, adding together duplicate
+    reactions
+    """
+    rxn_dict = {}
+    for equation, rate in zip(reaction_equations, net_rates):
+        try:
+            rxn_dict[equation] += rate
+        except KeyError:
+            rxn_dict[equation] = rate
+    return rxn_dict
 """
 
 
