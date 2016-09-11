@@ -165,11 +165,12 @@ def eliminate_species_from_mechanism(species_list, kept_reactions,inert_species)
     reacting_species = []
     for reaction in kept_reactions:
         reacting_species += reaction.reactants.keys() + reaction.products.keys()
-    # remove duplicates
-    reduced_species_list = list(set(reacting_species))
-
+    # remove duplicates and add inert
+    reduced_species_name_list = list(set(reacting_species)) + inert_species
+    
+    reduced_species_list = []
     for species in species_list:
-        if species.name in inert_species:
+        if species.name in reduced_species_name_list:
             reduced_species_list.append(species)
             
     return reduced_species_list
@@ -192,6 +193,3 @@ def create_mechanism(full_model_file_path,kept_reaction_equations='all',non_reac
         reduced_species = eliminate_species_from_mechanism(spec,reduced_reactions,non_reactive_species)
         return ct.Solution(thermo='IdealGas', kinetics='GasKinetics',
                           species=reduced_species, reactions=reduced_reactions)
-
-
-    
