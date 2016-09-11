@@ -18,13 +18,14 @@ Setup of System
 """
 
 
-def get_initial_mole_fractions(stoich_ratio, fuel_mole_ratios, oxygen_per_fuel_at_stoic_list):
+def get_initial_mole_fractions(stoich_ratio, fuel_mole_ratios, oxygen_per_fuel_at_stoic_list, fuels = None):
     """
     this method obtains your initial mole fractions for fuel in air.
     the product is returned as a list with nitrogen, oxygen, and then
     the fuels are listed.
     
     stoich_ratio = oxygen to fuel stoichiometric ratio in the system
+    fuels = list of strings for output dictionary. If ommitted, a list is returned
     fuel_mole_ratios = list of molar ratios of various fuels (must sum to 1)
     oxygen_per_fuel_at_stoic_list = a list containing the number of oxygen 
             molecules necessary for full combustion of each molecule. For 
@@ -41,9 +42,14 @@ def get_initial_mole_fractions(stoich_ratio, fuel_mole_ratios, oxygen_per_fuel_a
     total_nitrogen = total_oxygen * .79/.21
     total_species = total_fuel + total_oxygen + total_nitrogen
     mole_fractions = np.concatenate(([total_nitrogen, total_oxygen],fuel_mole_ratios),0)
-    return mole_fractions/total_species
-
-
+    normalized_mole_fractions = mole_fractions/total_species
+    if fuels:
+        fuel_zip =  [(fuels[index],normalized_mole_fractions[index+2]) for index in range(len(fuels))]
+        air_zip = [('N2',normalized_mole_fractions[0]),('O2',normalized_mole_fractions[1])]
+        mole_fraction_dictionary = dict(air_zip+fuel_zip)
+        return mole_fraction_dictionary
+    else:
+        return normalized_mole_fractions
 """
 
 
