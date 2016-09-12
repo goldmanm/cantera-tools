@@ -28,7 +28,7 @@ def general_changes():
     mpl.rcParams['text.usetex'] = True
     mpl.rcParams['text.latex.unicode'] = True
 
-def set_tick_locator_for_mpl(self,axis):
+def set_linear_tick_locator_for_mpl(self,axis):
     """Hack to limit number of labels automatically
     Written by Schulfa Schwein on stack overflow: 
     http://stackoverflow.com/questions/10437689/matplotlib-globally-set-number-of-ticks-x-axis-y-axis-colorbar"
@@ -41,21 +41,19 @@ def set_tick_locator_for_mpl(self,axis):
     axis.set_major_formatter(mpl.ticker.ScalarFormatter())
     axis.set_minor_locator(mpl.ticker.NullLocator())
     axis.set_minor_formatter(mpl.ticker.NullFormatter())
-    # override original method
-    mpl.scale.LinearScale.set_default_locators_and_formatters = set_tick_locator_for_mpl
-    #major_locator = mpl.ticker.MaxNLocator(nbins = nlabels - 1)
-    #axis.set_major_locator(major_locator)
     
     
 def reduce_labels(nlabels = 3):
     # make MaxNLocator default
-    mpl.scale.LinearScale.set_default_locators_and_formatters = set_tick_locator_for_mpl
+    mpl.scale.LinearScale.set_default_locators_and_formatters = set_linear_tick_locator_for_mpl
+    #mpl.scale.LogScale.set_default_locators_and_formatters = set_tick_locator_for_mpl
     mpl.ticker.MaxNLocator.default_params['nbins'] = nlabels-1 #this might 
     
 def presentation():
     reduce_labels()
     mpl.rcParams['figure.figsize'] = (12.0,8.0) # default = (6.0, 4.0)
-    mpl.rcParams['font.size'] = 35 # default = 10
+    mpl.rcParams['font.size'] = 25 # default = 10
+    mpl.rcParams['legend.fontsize'] = 'small' # default = large
     mpl.rcParams['axes.linewidth'] = 2.0 # default = 1.0
     mpl.rcParams['lines.linewidth'] = 2.0 # default = 1.0
     mpl.rcParams['patch.linewidth'] = 1.0 # default = 1.0
@@ -70,7 +68,7 @@ def presentation():
     #mpl.rcParams['ytick.minor.width'] = 1.0 # default = 0.5
 
 
-def publications():
+def publication():
     mpl.rcParams['figure.figsize'] = (12.0,8.0) # default = (6.0, 4.0)
     mpl.rcParams['font.size'] = 18 # default = 10
     mpl.rcParams['axes.linewidth'] = 2.0 # default = 1.0
