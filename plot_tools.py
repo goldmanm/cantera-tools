@@ -27,6 +27,7 @@ def general_changes():
     mpl.rcParams['savefig.dpi'] = 200
     mpl.rcParams['text.usetex'] = True
     mpl.rcParams['text.latex.unicode'] = True
+    mpl.rcParams['text.latex.preamble'] = [r"\usepackage[version=4]{mhchem}"]
 
 def set_linear_tick_locator_for_mpl(self,axis):
     """Hack to limit number of labels automatically
@@ -43,16 +44,27 @@ def set_linear_tick_locator_for_mpl(self,axis):
     axis.set_minor_formatter(mpl.ticker.NullFormatter())
     
     
+def set_log_tick_locator_for_mpl(self,axis):
+    """Hack to limit number of labels automatically
+    Written by Schulfa Schwein on stack overflow: 
+    http://stackoverflow.com/questions/10437689/matplotlib-globally-set-number-of-ticks-x-axis-y-axis-colorbar"
+    """
+
+    axis.set_major_locator(mpl.ticker.LogLocator(self.base,numticks=4))
+    axis.set_major_formatter(mpl.ticker.LogFormatterMathtext(self.base))
+    axis.set_minor_locator(mpl.ticker.LogLocator(self.base, self.subs))
+    axis.set_minor_formatter(mpl.ticker.NullFormatter())
+    
 def reduce_labels(nlabels = 3):
     # make MaxNLocator default
     mpl.scale.LinearScale.set_default_locators_and_formatters = set_linear_tick_locator_for_mpl
-    #mpl.scale.LogScale.set_default_locators_and_formatters = set_tick_locator_for_mpl
+    mpl.scale.LogScale.set_default_locators_and_formatters = set_log_tick_locator_for_mpl
     mpl.ticker.MaxNLocator.default_params['nbins'] = nlabels-1 #this might 
     
 def presentation():
     reduce_labels()
     mpl.rcParams['figure.figsize'] = (12.0,8.0) # default = (6.0, 4.0)
-    mpl.rcParams['font.size'] = 25 # default = 10
+    mpl.rcParams['font.size'] = 33 # default = 10
     mpl.rcParams['legend.fontsize'] = 'small' # default = large
     mpl.rcParams['axes.linewidth'] = 2.0 # default = 1.0
     mpl.rcParams['lines.linewidth'] = 2.0 # default = 1.0
@@ -64,6 +76,14 @@ def presentation():
     mpl.rcParams['ytick.major.width'] = 2.0 # default = 0.5
     mpl.rcParams['xtick.major.pad'] = 16 #default = 4.0 (prevents overlap labels)
     general_changes()
+    
+    # for later need to set default bold font for presentation mode, but not sure how.
+    
+    
+    #latex_preamble = ['\usepackage{fontspec}','\setmathfont{Cambria Math}']
+    #mpl.rcParams['axes.formatter.use_mathtext']=True
+    #mpl.rcParams['mathtext.fontset'] = 'custom'
+    #mpl.rcParams['mathtext.default'] = 'sf'
     #mpl.rcParams['xtick.minor.width'] = 1.0 # default = 0.5
     #mpl.rcParams['ytick.minor.width'] = 1.0 # default = 0.5
 
