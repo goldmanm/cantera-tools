@@ -154,12 +154,14 @@ def reduce_reactions_in_mechanism(reaction_list, kept_reaction_equations):
     """
     finds reactions that match the form of the reaction equations in 
     kept_reaction_equations. It returns just the reactions that are meant
-    to be in the mechanism
+    to be in the mechanism.
+    
+    This does not check for equations not in kept_reaction_equations. must be fixed
     """
     reduced_reaction_list = []
     for reaction in reaction_list:
         if reaction.equation in kept_reaction_equations:
-            reduced_reaction_list.append(reaction)
+            reduced_reaction_list.append(reaction)        
     return reduced_reaction_list
 
 def eliminate_species_from_mechanism(species_list, kept_reactions,inert_species):

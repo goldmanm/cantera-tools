@@ -17,6 +17,10 @@ import plot_tools
 plot_tools.presentation()
 import matplotlib.pyplot as plt
 ```
+
+a future improvement might be to set tick labels on the upper and lower margins
+instead of the middle to avoid conflicting letters
+
 """
 
 import matplotlib as mpl
@@ -50,7 +54,7 @@ def set_log_tick_locator_for_mpl(self,axis):
     http://stackoverflow.com/questions/10437689/matplotlib-globally-set-number-of-ticks-x-axis-y-axis-colorbar"
     """
 
-    axis.set_major_locator(mpl.ticker.LogLocator(self.base,numticks=4))
+    axis.set_major_locator(mpl.ticker.LogLocator(self.base,numticks=3))
     axis.set_major_formatter(mpl.ticker.LogFormatterMathtext(self.base))
     axis.set_minor_locator(mpl.ticker.LogLocator(self.base, self.subs))
     axis.set_minor_formatter(mpl.ticker.NullFormatter())
@@ -80,12 +84,13 @@ def presentation():
     # for later need to set default bold font for presentation mode, but not sure how.
     
     
-    #latex_preamble = ['\usepackage{fontspec}','\setmathfont{Cambria Math}']
-    #mpl.rcParams['axes.formatter.use_mathtext']=True
-    #mpl.rcParams['mathtext.fontset'] = 'custom'
-    #mpl.rcParams['mathtext.default'] = 'sf'
-    #mpl.rcParams['xtick.minor.width'] = 1.0 # default = 0.5
-    #mpl.rcParams['ytick.minor.width'] = 1.0 # default = 0.5
+    
+    # make latex font visible
+    #latex_preamble = [r'\usepackage[mathbf]{euler}'] # ideal depth but odd shape
+    latex_preamble = [r'\usepackage{arev}'] # pretty visible 
+    #latex_preamble = [r'\usepackage{cmbright}'] # too light color
+    mpl.rcParams['text.latex.preamble'] = mpl.rcParams['text.latex.preamble'] + latex_preamble
+
 
 
 def publication():
