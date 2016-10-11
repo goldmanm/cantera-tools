@@ -27,6 +27,7 @@ import matplotlib as mpl
 #import matplotlib.pyplot as plt
 
 def general_changes():
+    mpl.rcParams['figure.figsize'] = (12.0,8.0) # default = (6.0, 4.0)
     mpl.rcParams['figure.dpi'] = 200
     mpl.rcParams['savefig.dpi'] = 200
     mpl.rcParams['text.usetex'] = True
@@ -67,7 +68,6 @@ def reduce_labels(nlabels = 3):
     
 def presentation():
     reduce_labels()
-    mpl.rcParams['figure.figsize'] = (12.0,8.0) # default = (6.0, 4.0)
     mpl.rcParams['font.size'] = 33 # default = 10
     mpl.rcParams['legend.fontsize'] = 'small' # default = large
     mpl.rcParams['axes.linewidth'] = 2.0 # default = 1.0
@@ -80,11 +80,7 @@ def presentation():
     mpl.rcParams['ytick.major.width'] = 2.0 # default = 0.5
     mpl.rcParams['xtick.major.pad'] = 16 #default = 4.0 (prevents overlap labels)
     general_changes()
-    
-    # for later need to set default bold font for presentation mode, but not sure how.
-    
-    
-    
+ 
     # make latex font visible
     #latex_preamble = [r'\usepackage[mathbf]{euler}'] # ideal depth but odd shape
     latex_preamble = [r'\usepackage{arev}'] # pretty visible 
@@ -94,7 +90,6 @@ def presentation():
 
 
 def publication():
-    mpl.rcParams['figure.figsize'] = (12.0,8.0) # default = (6.0, 4.0)
     mpl.rcParams['font.size'] = 18 # default = 10
     mpl.rcParams['axes.linewidth'] = 2.0 # default = 1.0
     mpl.rcParams['lines.linewidth'] = 2.0 # default = 1.0
