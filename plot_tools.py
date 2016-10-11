@@ -104,3 +104,4 @@ def publication():
     mpl.rcParams['xtick.minor.width'] = 1.0 # default = 0.5
     mpl.rcParams['ytick.major.width'] = 1.0 # default = 0.5
     mpl.rcParams['ytick.minor.width'] = 1.0 # default = 0.5
+    general_changes()
