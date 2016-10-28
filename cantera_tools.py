@@ -127,7 +127,53 @@ def eliminate_species_from_mechanism(species_list, kept_reactions,inert_species)
 # 1c. run mechanism
 ###################################
 
+def find_ignition_delay(solution, conditions, 
+                      condition_type = 'adiabatic-constant-volume',
+                      output_profile = False,
+                      temp_final = 965,
+                      output_reactions = True,):
+    """
+    This method finds the ignition delay of a cantera solution object with
+    an option to return all species and reactions as a pandas.DataFrame object
+    which can be stored. The simulation uses a hard-temperature cutoff to determine
+    ignition. 
+    
+    This method returns a tuple with ignition delay and the DataFrame (or `None`)
+    if not specified. 
+    
+    `solution` = Cantera.Solution object
+    `conditions` = tuple of temperature, pressure, and mole fraction initial species
+    `condition_type` = string describing the run type, currently only 'adiabatic-constant-volume' supported
+    `output_profile` = should the program save simulation results and output them
+    `temp_final` = the temperature which the ignition is reported
+    `output_reactions` = should the data contain reactions as well. If
+            output_profile is False, this has no effect
+    """
+    solution.TPX = conditions    
+    if condition_type == 'adiabatic-constant-volume':
+        reactor = ct.IdealGasReactor(solution)
+        simulator = ct.ReactorNet([reactor])
+        solution = reactor.kinetics
+    else:
+        raise NotImplementedError('only adiabatic constant volume is supported')
+        
+    # setup data storage
+    if output_profile:
+        df = pd.DataFrame()
+        df = append_data_to_df(simulator, solution, df, add_rxns=output_reactions)
 
+        
+    # run simulation
+    time_final = 500 #seconds
+    while simulator.time < time_final and reactor.T < temp_final:
+        simulator.step(time_final)
+        if output_profile:
+            df = append_data_to_df(simulator,solution,df, add_rxns=output_reactions)
+
+    if output_profile:
+        return simulator.time, df
+    else:
+        return simulator.time, None
 
 ###################################
 # 1d. saving data
@@ -202,8 +248,8 @@ def append_data_to_df(simulator,solution, df, basics= ['time','temperature','pre
     
 def __get_rxn_rate_dict(reaction_equations, net_rates):
     """
-    makes a dictionary out of the two inputs, adding together duplicate
-    reactions
+    makes a dictionary out of the two inputs. If identical reactions are encountered,
+    called duplicates in Cantera, the method will merge them and sum the rate together
     """
     rxn_dict = {}
     for equation, rate in zip(reaction_equations, net_rates):
