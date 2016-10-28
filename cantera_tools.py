@@ -258,3 +258,44 @@ def __get_rxn_rate_dict(reaction_equations, net_rates):
         except KeyError:
             rxn_dict[equation] = rate
     return rxn_dict
+
+
+
+###################################
+# 2. cantera mechanism analysis
+###################################
+
+
+
+###################################
+# 3. output data analysis
+###################################
+
+def branching_ratios (df,desired_pathway, all_consumption_pathways):
+    """
+    df - pandas dataframe holding reaction rates at each time
+    desired_pathway - string of reaction of the desired pathway, 
+                    which is a key in all_consumption_pathway
+    all_consumption_pathway - a dictionary with keys being reaction
+                    strings and the value is the stoichiometric 
+                    coefficient (positive = reactant)
+                    
+    Returns the branching ratio of that reaction at all time points
+    in the simulation.
+    
+    example code might be:
+
+    ```
+
+    ```    
+    
+    """
+    all_rates = sum([df[reaction]*all_consumption_pathways[reaction] for reaction in all_consumption_pathways.keys()])
+    desired_rate = df[desired_pathway]*all_consumption_pathways[desired_pathway]
+    return desired_rate/all_rates
+    
+
+
+###################################
+# 4. plotting
+###################################
