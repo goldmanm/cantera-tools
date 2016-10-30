@@ -28,14 +28,17 @@ divided into:
 # 1a. system setup
 ###################################
 
-def get_initial_mole_fractions(stoich_ratio, fuel_mole_ratios, oxygen_per_fuel_at_stoic_list, fuels = None):
+def get_initial_mole_fractions(stoich_ratio, 
+                               fuel_mole_ratios, 
+                               oxygen_per_fuel_at_stoic_list, 
+                               fuels = None):
     """
     this method obtains your initial mole fractions for fuel in air.
     the product is returned as a list with nitrogen, oxygen, and then
     the fuels are listed.
     
     stoich_ratio = oxygen to fuel stoichiometric ratio in the system
-    fuels = list of strings for output dictionary. If ommitted, a list is returned
+    fuels = list of canter fuel names for output dictionary. If ommitted, a list is returned
     fuel_mole_ratios = list of molar ratios of various fuels (must sum to 1)
     oxygen_per_fuel_at_stoic_list = a list containing the number of oxygen 
             molecules necessary for full combustion of each molecule. For 
