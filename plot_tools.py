@@ -24,7 +24,7 @@ instead of the middle to avoid conflicting letters
 """
 
 import matplotlib as mpl
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 """
 This file contains tools that can be called at the begining of a 
 script to modify all the matplotlib graphs. The two most useful methods
@@ -108,3 +108,39 @@ def publication():
     mpl.rcParams['ytick.major.width'] = 1.0 # default = 0.5
     mpl.rcParams['ytick.minor.width'] = 1.0 # default = 0.5
     general_changes()
+
+
+
+######################################################
+# methods for usage within plotting functions
+######################################################
+
+def get_color_list_from_colormap(name,number_colors=10):
+    """
+    returns list of length `number_colors` based on the default 
+    colormap of `name`. number must be less than 256
+    
+    this can be implemented in matplotlib by
+    
+    ```
+    colors = get_color_list_from_colormap('viridis',number_reactions)
+    axis.set_prop_cycle(cycler('color',colors))
+    ```
+    
+    Seaborn package may be able to do similar things to this.
+    """
+
+    colormap = plt.get_cmap(name)
+    color_array = colormap.colors
+    color_map_colors = len(color_array)
+    if number_colors == 1:
+        return [color_array[0]]
+    if number_colors > color_map_colors:
+        raise ValueError('number colors cannot be more than %i. currently is %i' % (color_map_colors,number_colors))
+    # find distance between each node, and multiply by almost one to allow proper 'floor'ing of double
+    distance_between_array_elements = float(color_map_colors) / (number_colors-1) * 0.999999999999
+    colors = []
+    for index in range(number_colors):
+        color = color_array[int(index*distance_between_array_elements)]
+        colors.append(color)
+    return colors
