@@ -25,7 +25,15 @@ instead of the middle to avoid conflicting letters
 
 import matplotlib as mpl
 #import matplotlib.pyplot as plt
+"""
+This file contains tools that can be called at the begining of a 
+script to modify all the matplotlib graphs. The two most useful methods
+might be `presentation` and `publication`, which changes the detail on
+how much information is in figures
 
+I might want to look into compatibility with the seaborn package.
+
+"""
 def general_changes():
     mpl.rcParams['figure.figsize'] = (12.0,8.0) # default = (6.0, 4.0)
     mpl.rcParams['figure.dpi'] = 200
