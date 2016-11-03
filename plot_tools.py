@@ -144,3 +144,54 @@ def get_color_list_from_colormap(name,number_colors=10):
         color = color_array[int(index*distance_between_array_elements)]
         colors.append(color)
     return colors
+    
+def place_legend_outside_plot(axis,legend_entry):
+    """
+    this method takes an axis object and the text of the legend, and
+    it places the legend to the right of the figure, making the figure
+    less wide.
+    """
+    axis.legend(legend_entry, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+    
+    
+######################################################
+# methods that plot functions for you
+######################################################
+
+def plot_multiple_comparisons(data,dictionary_of_plots,x_data = None,
+                              log_plots = [],
+                              title='',
+                              xlabel='time',
+                              yunit=''):
+    """
+    This method takes in a data frame and plots multiple plots each named
+    by the key in `dictionary_of_plots` with the column(s) given by the list
+    in the values of `dictionary_of_plots`. 
+    
+    x_data is a pd.Series object for the data to be plotted. If the x_axis is
+    meant to be the index of the dataframe `data`, then it doesn't need to be
+    specified.
+    
+    title = string above all plots
+    xlabel = plt.xlabel
+    ynit = unit appended to the ylabel
+    """
+    number_ratios = len(dictionary_of_plots.keys())
+    f, axes = plt.subplots(number_ratios,1, sharex=True,figsize=(12,6*number_ratios))
+    
+    axes[0].set_title(title)
+    for plot_name, axis in zip(dictionary_of_plots.keys(),axes):
+        isotopomers = dictionary_of_plots[plot_name]
+        sum_of_isotopomers = data.filter(isotopomers).sum('columns')
+        for isotopomer in isotopomers:
+            axis.plot(x_data,data[isotopomer]/sum_of_isotopomers)
+        #axis.set_xscale('log')
+        if plot_name in log_plots:
+            axis.set_yscale('log')
+        #else:
+            #axis.set_ylim((-.1,1.1))
+        #axis.legend(dictionary_of_plots[plot_name], loc='best')
+        place_legend_outside_plot(axis,dictionary_of_plots[plot_name])
+        axis.set_ylabel(plot_name + ' (' + yunit+ ')')
+    axes[-1].set_xlabel(xlabel)
+    
