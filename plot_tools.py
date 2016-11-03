@@ -181,6 +181,7 @@ def latexify_legend(legend_string,mode = 'math'):
     
 ######################################################
 # methods that plot functions and return the figure object
+# this mostly involves methods used in data analysis of various projects
 ######################################################
 
 def plot_multiple_comparisons(data,dictionary_of_plots,x_data = None,
@@ -202,6 +203,8 @@ def plot_multiple_comparisons(data,dictionary_of_plots,x_data = None,
     ynit = unit appended to the ylabel
     
     returns the figure object,whose axes can be accessed with output.
+    
+    used in the isotope project
     """
     number_ratios = len(dictionary_of_plots.keys())
     f, axes = plt.subplots(number_ratios,1, sharex=True,figsize=(12,6*number_ratios))

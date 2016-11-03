@@ -7,6 +7,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import re
 import warnings
+import plot_tools as ptt
+import copy
 """
 This module contains script methods for analysis of cantera mechanisms.
 The dependencies for this analysis are imported above. The section is 
@@ -20,6 +22,8 @@ divided into:
 2. methods for analyzing the cantera 'Solution' object
 3. methods for analyzing output from cantera runs using the run data (from part 1)
 4. methods for analyzing output using output data and cantera 'Solution' object
+
+
 
 """
 
@@ -268,37 +272,171 @@ def __get_rxn_rate_dict(reaction_equations, net_rates):
 # 2. cantera mechanism analysis
 ###################################
 
+def obtain_stoichiometry_of_species(solution, species, reaction):
+    """
+    this method finds a reaction string in the cantera solution file, and 
+    returns its stoichiometric coefficient of the specified species.
+    Returns a negative value if the species is a reactant.
+    
+    solution = cantera solution object
+    species = string of species name
+    reaction = reaction string or list of reaction strings.
+    
+    Stoichiometry is calculated by: product_stoich_coeff - reactant_stoich_coeff
+    """
+    # change this to a try/except statement to deal with arrays properly.;..though this won't work since 
+    # strings are iterable.
+    
+    
+    # recursively deal with lists of reactions
+    if not isinstance(reaction,str):
+        coefficients = np.empty(len(reaction))
+        for index, reaction_string in enumerate(reaction):
+            coefficients[index] = obtain_stoichiometry_of_species(solution,species,reaction_string)
+        return coefficients
+    # deal with individual reactions    
+    reaction_index = solution.reaction_equations().index(reaction)
+    reactant_stoich_coeff = solution.reactant_stoich_coeff(species, reaction_index)
+    product_stoich_coeff = solution.product_stoich_coeff(species, reaction_index)
+    if product_stoich_coeff > 0 or reactant_stoich_coeff > 0:
+        return product_stoich_coeff - reactant_stoich_coeff
+    raise Exception('Species {} is not in reaction {}'.format(species,reaction))
 
 
 ###################################
-# 3. output data analysis
+# 3a. output data processing methods
+# these methods are less likely to be useful by themselves.
+# many methods in 3b call these
 ###################################
 
-def branching_ratios (df,desired_pathway, all_consumption_pathways):
-    """
-    df - pandas dataframe holding reaction rates at each time
-    desired_pathway - string of reaction of the desired pathway, 
-                    which is a key in all_consumption_pathway
-    all_consumption_pathway - a dictionary with keys being reaction
-                    strings and the value is the stoichiometric 
-                    coefficient (positive = reactant)
-                    
-    Returns the branching ratio of that reaction at all time points
-    in the simulation.
-    
-    example code might be:
+def remove_ignition(df, percent_cutoff=0.98):
+    "returns a dataframe with time points after `percent_cutoff` removed."
+    end_time = df['time (s)'].iloc[-1]
+    data_before_ignition=df[df['time (s)'] < end_time*percent_cutoff]
+    return data_before_ignition
 
-    ```
+def integrate_data(df, integration_column):
+    """
+    Takes a data frame and performs an integration 
+    of each column over the `integration_column`, 
+    which is a pandas.Series object. This
+    uses the method of right Reman sum.
+    """
+    time_intervals = integration_column.diff()
+    time_intervals.iloc[0] = 0
+    return df.mul(time_intervals, axis='index')
+    
 
-    ```    
+def find_reactions(df,species='any'):
+    """
+    finds the reaction columns in the dataframe and returns them
+    if a string, species, is specified, it will only return reactions
+    with the matching species.
+    """
+    # find reaction columns
+    df_reactions = df.loc[:,['=' in column for column in df.columns]]
+    if species =='any':
+        return df_reactions
+    expression = r'(\b%s\b)' %(species)
+    df_my_reactions = df_reactions.loc[:,[re.compile(expression).search(column) != None for column in df_reactions.columns]]
+    return df_my_reactions
+
+def find_species(df):
+    """
+    finds the species columns in the dataframe and returns them
+    if a string, species, is specified, it will only return reactions
+    with the matching species.
+    """
+    # find reaction columns
+    df_not_reactions = df.loc[:,['=' not in column for column in df.columns]]
+    # hard coded properties. not the ideal way
+    properties = ['time (s)','temperature (K)','density (kmol/m3)','cp (J/kmol/K)','cv (J/kmol/K)','pressure (Pa)','volume (m3)']
+    not_states_map = [all([state not in column for state in properties]) for column in df_not_reactions.columns]
+    if all(not_states_map):
+        raise Exception('did not find states')
+    df_not_reactions_states = df_not_reactions.loc[:,not_states_map]
+    return df_not_reactions_states
+
+def return_nearest_time_index(desired_time,time_series,index=True):
+    """
+    input the desired time, double, and time_series, pd.Series,
+    returns the index of the time_series. 
+    If you want the actual time value, change index=False
+    """
+    nearest_value = lambda value, array: np.argmin(abs(value-array))
+    if index:
+        return nearest_value(0.4,time_series)
+    return time_series[nearest_value(0.4,time_series)]
+
+###################################
+# 3b. output data analysis
+###################################
+
+def consumption_pathways(solution,df,species='any',ignore_ignition=True):
+    """
+    returns the total rate of production 
+    for a particular species
+    over the entire simulation using
+    the forward difference approximation.
+    
+    This doesn't take stoichiometric coefficients into account for reactions
+    """
+
+    df_reactions_weighted = integrate_data(find_reactions(df,species), df['time (s)'])
+    if ignore_ignition:
+        last_index = remove_ignition(df).shape[0] 
+    else:
+        last_index = df.shape[0]-1
+    reactions_weighted = df_reactions_weighted[df.index<last_index].sum()
+    
+    if species != 'any': # weight to stoich coefficients
+        stoich_coeffs = [obtain_stoichiometry_of_species(solution, species, reaction) for reaction in reactions_weighted.index]
+        stoich_coeff_dict = pd.Series(dict(zip(reactions_weighted.index,stoich_coeffs)))
+        reactions_weighted *= stoich_coeff_dict
+    return reactions_weighted.sort_values()
+
+
+def compare_species_profile_at_one_time(desired_time, df1,df2,
+                                        minimum_return_value=1e-13,
+                                       time_string = 'time (s)'):
+    """
+    compares the species profile between two models closest to the desired time
+    returns a pandas.Series object with the relative species concentrations
+    given by `compare_2_data_sets
+    """
+    
+    time_index_1 = return_nearest_time_index(desired_time,df1[time_string])
+    time_index_2 = return_nearest_time_index(desired_time,df2[time_string])
+    
+    time_slice_1 = find_species(df1).loc[time_index_1]
+    time_slice_2 = find_species(df2).loc[time_index_2]
+    return _compare_2_data_sets(time_slice_1,time_slice_2,minimum_return_value)
+
+def _compare_2_data_sets(model1, model2, minimum_return_value = 1000,diff_returned=0.0):
+    """given two pd.Series of data, returns a pd.Series with the relative
+    differences between the two sets. This requires one of the values to be
+    above the `minimum_return_cutoff` and the difference to be above `diff_returned`
+    
+    The difference is returned as $\frac{model1 - model2}{\min(model1,model2)}$.
+    Where the minimum merges the two datasets using the minimum value at each index. 
     
     """
-    all_rates = sum([df[reaction]*all_consumption_pathways[reaction] for reaction in all_consumption_pathways.keys()])
-    desired_rate = df[desired_pathway]*all_consumption_pathways[desired_pathway]
-    return desired_rate/all_rates
+    #ensure all values are the same
+    model1 = copy.deepcopy(model1)[model2.index].dropna()
+    model2 = copy.deepcopy(model2)[model1.index].dropna()
+    minimum_value = pd.DataFrame({'model1':model1,'model2':model2}).min(1)
+    compared_values = ((model1-model2)/minimum_value).dropna()
+    for label in compared_values.index:
+        not_enough_value = (model1[label] < minimum_return_value and model2[label] < minimum_return_value)
+        not_enough_difference = abs(compared_values[label]) < diff_returned
+        if  not_enough_value or not_enough_difference:
+            compared_values[label] = np.nan
+    compared_values = compared_values.dropna()
+    return compared_values.sort_values()
     
 
 
 ###################################
 # 4. plotting
+# this includes plotting functions specific to cantera 
 ###################################
