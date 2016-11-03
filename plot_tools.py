@@ -25,6 +25,7 @@ instead of the middle to avoid conflicting letters
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from cycler import cycler
 """
 This file contains tools that can be called at the begining of a 
 script to modify all the matplotlib graphs. The two most useful methods
@@ -115,7 +116,7 @@ def publication():
 # methods for usage within plotting functions
 ######################################################
 
-def get_color_list_from_colormap(name,number_colors=10):
+def _get_color_list_from_colormap(name,number_colors=10):
     """
     returns list of length `number_colors` based on the default 
     colormap of `name`. number must be less than 256
@@ -123,7 +124,8 @@ def get_color_list_from_colormap(name,number_colors=10):
     this can be implemented in matplotlib by
     
     ```
-    colors = get_color_list_from_colormap('viridis',number_reactions)
+    colors = plot_tools._get_color_list_from_colormap('viridis',number_reactions)
+    from cycler import cycler
     axis.set_prop_cycle(cycler('color',colors))
     ```
     
@@ -145,6 +147,16 @@ def get_color_list_from_colormap(name,number_colors=10):
         colors.append(color)
     return colors
     
+def set_colors(number_colors=10,name = 'viridis'):
+    """
+    sets the color cycle to the `number_colors` using the colormap `name`.
+    
+    this allows for easy comparison of N set of parameters on one graph.
+    For example, a full and reduced model
+    """
+    colors = _get_color_list_from_colormap( name, number_colors)
+    mpl.rcParams['axes.prop_cycle'] = cycler('color',colors)
+
 def place_legend_outside_plot(axis,legend_entry):
     """
     this method takes an axis object and the text of the legend, and
@@ -153,9 +165,22 @@ def place_legend_outside_plot(axis,legend_entry):
     """
     axis.legend(legend_entry, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
     
+def latexify_legend(legend_string,mode = 'math'):
+    """makes the legend string interpreted able to be interpreted
+    by adding a 
+    """
+    if mode =='math':
+        prefix = r'$'
+        sufix = r"$"
+    elif mode == 'chemistry':
+        prefix = r'\ce{'
+        sufix = r'}'
+    for index,string in enumerate(legend_string):
+        legend_string[index] = prefix + string + sufix
+    return legend_string
     
 ######################################################
-# methods that plot functions for you
+# methods that plot functions and return the figure object
 ######################################################
 
 def plot_multiple_comparisons(data,dictionary_of_plots,x_data = None,
