@@ -175,6 +175,8 @@ def plot_multiple_comparisons(data,dictionary_of_plots,x_data = None,
     title = string above all plots
     xlabel = plt.xlabel
     ynit = unit appended to the ylabel
+    
+    returns the figure object,whose axes can be accessed with output.
     """
     number_ratios = len(dictionary_of_plots.keys())
     f, axes = plt.subplots(number_ratios,1, sharex=True,figsize=(12,6*number_ratios))
@@ -194,4 +196,4 @@ def plot_multiple_comparisons(data,dictionary_of_plots,x_data = None,
         place_legend_outside_plot(axis,dictionary_of_plots[plot_name])
         axis.set_ylabel(plot_name + ' (' + yunit+ ')')
     axes[-1].set_xlabel(xlabel)
-    
+    return f
