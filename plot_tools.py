@@ -37,11 +37,15 @@ I might want to look into compatibility with the seaborn package.
 """
 def general_changes():
     mpl.rcParams['figure.figsize'] = (12.0,8.0) # default = (6.0, 4.0)
-    mpl.rcParams['figure.dpi'] = 200
-    mpl.rcParams['savefig.dpi'] = 200
+    mpl.rcParams['figure.dpi'] = 300
+    mpl.rcParams['savefig.dpi'] = 300
+    use_tex()
+
+def use_tex():
     mpl.rcParams['text.usetex'] = True
     mpl.rcParams['text.latex.unicode'] = True
     mpl.rcParams['text.latex.preamble'] = [r"\usepackage[version=4]{mhchem}"]
+
 
 def set_linear_tick_locator_for_mpl(self,axis):
     """Hack to limit number of labels automatically
@@ -129,7 +133,9 @@ def _get_color_list_from_colormap(name,number_colors=10):
     axis.set_prop_cycle(cycler('color',colors))
     ```
     
-    Seaborn package may be able to do similar things to this.
+    This method does not work with LinearColorMaps
+    
+    seaborn.mpl_palette(name,n_colors) seems identical to this
     """
 
     colormap = plt.get_cmap(name)
@@ -152,18 +158,34 @@ def set_colors(number_colors=10,name = 'viridis'):
     sets the color cycle to the `number_colors` using the colormap `name`.
     
     this allows for easy comparison of N set of parameters on one graph.
-    For example, a full and reduced model
+    For example, a full and reduced model with the same number of variables
+    can be plotted with different icons ('-', '.', etc) without specifying
+    colors each time.
+    
+    deprecated, use instead:
+    
+    ```
+    import seaborn as sns
+    color_palette = sns.mpl_palette('jet',10)
+    sns.set_palette(color_palette)
+    ```
+    
+    checkout color map options [here](http://matplotlib.org/users/colormaps.html)
     """
+    
     colors = _get_color_list_from_colormap( name, number_colors)
     mpl.rcParams['axes.prop_cycle'] = cycler('color',colors)
 
-def place_legend_outside_plot(axis,legend_entry):
+def place_legend_outside_plot(axis,legend_entry= None):
     """
     this method takes an axis object and the text of the legend, and
     it places the legend to the right of the figure, making the figure
     less wide.
     """
-    axis.legend(legend_entry, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+    if legend_entry != None:
+        axis.legend(legend_entry, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+    else:
+        axis.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
     
 def latexify_legend(legend_string,mode = 'math'):
     """makes the legend string interpreted able to be interpreted
