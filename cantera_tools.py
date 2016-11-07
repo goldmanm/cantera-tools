@@ -241,15 +241,18 @@ def append_data_to_df(simulator,solution, df, basics= ['time','temperature','pre
 
     if add_species:
         if species_names=='all':
-            species_names = solution.species_names
+            species_recorded = solution.species_names
+        else:
+            species_recorded = species_names
         mole_fractions = solution.mole_fraction_dict()
-        for name in species_names:
+        for name in species_recorded:
             try:
                 conditions[name] = mole_fractions[name] * solution.density_mole
             except KeyError:
                 conditions[name] = 0
-                if not initialization:
-                    warnings.warn('{} is not listed in the mole fraction dictionary. simulation time is {} with a DataFrame of shape {}'.format(name,simulator.time,df.shape))
+                # sends warning if user typed species incorrectly
+                if name in species_names and not initialization:
+                    warnings.warn('{} is not listed in the mole fraction dictionary and may be mispelled.'.format(name))
     
     if add_rxns:
         if reaction_names=='all':
@@ -307,7 +310,8 @@ def obtain_stoichiometry_of_species(solution, species, reaction):
         for index, reaction_string in enumerate(reaction):
             coefficients[index] = obtain_stoichiometry_of_species(solution,species,reaction_string)
         return coefficients
-    # deal with individual reactions    
+    # deal with individual reactions
+    assert isinstance(reaction,str)
     reaction_index = solution.reaction_equations().index(reaction)
     reactant_stoich_coeff = solution.reactant_stoich_coeff(species, reaction_index)
     product_stoich_coeff = solution.product_stoich_coeff(species, reaction_index)
@@ -352,6 +356,8 @@ def find_reactions(df,species='any'):
         return df_reactions
     expression = r'(\b%s\b)' %(species)
     df_my_reactions = df_reactions.loc[:,[re.compile(expression).search(column) != None for column in df_reactions.columns]]
+    if df_my_reactions.empty:
+        raise Exception('No reactions found for species {}'.format(species))
     return df_my_reactions
 
 def find_species(df):
