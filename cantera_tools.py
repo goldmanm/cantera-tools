@@ -34,15 +34,15 @@ divided into:
 
 def get_initial_mole_fractions(stoich_ratio, 
                                fuel_mole_ratios, 
-                               oxygen_per_fuel_at_stoic_list, 
+                               oxygen_per_fuel_at_stoich_list, 
                                fuels = None):
     """
     this method obtains your initial mole fractions for fuel in air.
-    the product is returned as a list with nitrogen, oxygen, and then
+    the product is returned as a dictionary  with nitrogen, oxygen, and then
     the fuels are listed.
     
     stoich_ratio = oxygen to fuel stoichiometric ratio in the system
-    fuels = list of canter fuel names for output dictionary. If ommitted, a list is returned
+    fuels = list of cantera fuel names for output dictionary. If ommitted, a list is returned
     fuel_mole_ratios = list of molar ratios of various fuels (must sum to 1)
     oxygen_per_fuel_at_stoic_list = a list containing the number of oxygen 
             molecules necessary for full combustion of each molecule. For 
@@ -50,9 +50,9 @@ def get_initial_mole_fractions(stoich_ratio,
     """
     #errror check
     np.testing.assert_allclose(sum(fuel_mole_ratios),1.)#,"mole ratios of fuels needs to add to one")
-    assert len(fuel_mole_ratios) ==len(oxygen_per_fuel_at_stoic_list)
+    assert len(fuel_mole_ratios) ==len(oxygen_per_fuel_at_stoich_list)
     
-    combined_oxygen_per_fuel = np.sum(np.multiply(fuel_mole_ratios,oxygen_per_fuel_at_stoic_list))
+    combined_oxygen_per_fuel = np.sum(np.multiply(fuel_mole_ratios,oxygen_per_fuel_at_stoich_list))
     
     total_fuel = sum(fuel_mole_ratios)
     total_oxygen = total_fuel * combined_oxygen_per_fuel / stoich_ratio
@@ -119,7 +119,7 @@ def eliminate_species_from_mechanism(species_list, kept_reactions,inert_species)
     
     reacting_species = []
     for reaction in kept_reactions:
-        reacting_species += reaction.reactants.keys() + reaction.products.keys()
+        reacting_species += list(reaction.reactants.keys()) + list(reaction.products.keys())
     # remove duplicates and add inert
     reduced_species_name_list = list(set(reacting_species)) + inert_species
     
@@ -194,6 +194,13 @@ def append_data_to_df(simulator,solution, df, basics= ['time','temperature','pre
     object (simulator) to the pandas.dataframe object (df). 
     
     The optional parameters define what is saved.
+    basics = a list of state variables to save: options are time, temperature
+        pressure, density, volume, cp and cv.
+    add_species = save the concentrations of species in kmol/m3.
+    species_names = list of species names to be saved (default is all)
+    add_reactions = save the concentration of reactions in kmol/m3s
+    reaction_names = list of reaction strings to be saved (default is all)
+    
     
     The following are enabled for the basics conditions:
     * time
@@ -205,6 +212,11 @@ def append_data_to_df(simulator,solution, df, basics= ['time','temperature','pre
     * cv (constant volume heat capacity)
     """
     
+    # this term is to suppress warning messages during initialization
+    if df.empty:
+        initialization = True
+    else:
+        initialization = False
     
     conditions = {}
     # add regular conditions
@@ -221,7 +233,7 @@ def append_data_to_df(simulator,solution, df, basics= ['time','temperature','pre
     if 'cp' in basics:
         conditions['heat capacity, cp (J/kmol/K)'] = solution.cp_mole
     if 'cv' in basics:
-        conditions['heat capacity, cp (J/kmol/K)'] = solution.cv_mole
+        conditions['heat capacity, cv (J/kmol/K)'] = solution.cv_mole
 #    if '' in basics:
 #        conditions[''] = solution.
     # end adding regular conditions
@@ -236,7 +248,8 @@ def append_data_to_df(simulator,solution, df, basics= ['time','temperature','pre
                 conditions[name] = mole_fractions[name] * solution.density_mole
             except KeyError:
                 conditions[name] = 0
-                warnings.warn('%s is not listed in the mole fraction dictionary. If this occurs after the first iteration, you may have typed the species incorrectly')
+                if not initialization:
+                    warnings.warn('{} is not listed in the mole fraction dictionary. simulation time is {} with a DataFrame of shape {}'.format(name,simulator.time,df.shape))
     
     if add_rxns:
         if reaction_names=='all':
@@ -248,7 +261,7 @@ def append_data_to_df(simulator,solution, df, basics= ['time','temperature','pre
                 conditions[name] = reaction_rates[name]
             except KeyError:
                 conditions[name] = 0
-                warnings.warn('%s is not listed in the reaction names. If this occurs after the first iteration, you may have typed the species incorrectly')
+                warnings.warn('{} is not listed in the reaction names.'.format(name))
     
     return df.append(conditions, ignore_index=True)
 
