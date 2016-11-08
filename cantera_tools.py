@@ -85,8 +85,7 @@ def create_mechanism(full_model_file_path,kept_reaction_equations='all',non_reac
     rxns = ct.Reaction.listFromFile(desired_file)
 
     if kept_reaction_equations=='all':
-        return ct.Solution(thermo='IdealGas', kinetics='GasKinetics',
-                      species=spec, reactions=rxns)
+        return ct.Solution(full_model_file_path)
     else:
         reduced_reactions = reduce_reactions_in_mechanism(rxns,kept_reaction_equations)
         reduced_species = eliminate_species_from_mechanism(spec,reduced_reactions,non_reactive_species)
@@ -350,15 +349,22 @@ def find_reactions(df,species='any'):
     if a string, species, is specified, it will only return reactions
     with the matching species.
     """
+    
     # find reaction columns
     df_reactions = df.loc[:,['=' in column for column in df.columns]]
     if species =='any':
         return df_reactions
-    expression = r'(\b%s\b)' %(species)
+    string = _prepare_string_for_re_processing(species)
+    expression = r'(\A|\s)%s(\Z|\s)' %(string)
     df_my_reactions = df_reactions.loc[:,[re.compile(expression).search(column) != None for column in df_reactions.columns]]
     if df_my_reactions.empty:
         raise Exception('No reactions found for species {}'.format(species))
     return df_my_reactions
+
+def _prepare_string_for_re_processing(string):
+    """ used for allowing parenthesis in species when searching reactions"""
+    return string.replace('(','\(').replace(')','\)')
+
 
 def find_species(df):
     """
