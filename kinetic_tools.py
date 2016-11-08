@@ -7,7 +7,7 @@ Created on Thu Sep 15 16:40:12 2016
 This file contains methods for calculating kinetics values that don't
 necessarily require cantera or another outside less known software package. 
 
-all rates are currently only in kcal/mol
+all rates are currently only in kcal/mol (except arrhenius)
 """
 
 # -*- coding: utf-8 -*-
@@ -16,7 +16,7 @@ import numpy as np
 
 
 def calculate_arr_rate(a,n,ea,T):
-    Rkin = 8314#kcal/molK
+    Rkin = 8.314#J/molK
     return a*T**n*np.exp(-ea/T/Rkin)
        
 
