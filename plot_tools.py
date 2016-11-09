@@ -26,6 +26,7 @@ instead of the middle to avoid conflicting letters
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from cycler import cycler
+import re
 """
 This file contains tools that can be called at the begining of a 
 script to modify all the matplotlib graphs. The two most useful methods
@@ -197,6 +198,11 @@ def latexify_legend(legend_string,mode = 'math'):
     elif mode == 'chemistry':
         prefix = r'\ce{'
         sufix = r'}'
+        #replace '=>' with '->'
+        irreversible_reaction = re.compile(r'\s=>')
+        for index, string in enumerate(legend_string):
+            if irreversible_reaction.search(string) != None:
+                legend_string[index] = re.sub(irreversible_reaction,' ->',string)
     for index,string in enumerate(legend_string):
         legend_string[index] = prefix + string + sufix
     return legend_string
