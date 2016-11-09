@@ -102,12 +102,22 @@ def reduce_reactions_in_mechanism(reaction_list, kept_reaction_equations):
     kept_reaction_equations. It returns just the reactions that are meant
     to be in the mechanism.
     
+    reaction_list = list of cantera Reaction objects
+    kept_reaction_equations = list of strings of reaction equations to keep.
+    
     This does not check for equations not in kept_reaction_equations. must be fixed
     """
     reduced_reaction_list = []
+    found_reaction = np.full(len(kept_reaction_equations), False, dtype=bool)
     for reaction in reaction_list:
         if reaction.equation in kept_reaction_equations:
-            reduced_reaction_list.append(reaction)        
+            reduced_reaction_list.append(reaction)
+            found_reaction[kept_reaction_equations.index(reaction.equation)] = True
+    if not all(found_reaction):
+        reactions_missed = np.array(kept_reaction_equations)[~ found_reaction]
+        raise Exception('Reactions not found in solution or appear twice in the kept_reaction_list: ' + \
+                                        str(reactions_missed) + \
+                                        str())
     return reduced_reaction_list
 
 def eliminate_species_from_mechanism(species_list, kept_reactions,inert_species):
@@ -318,6 +328,56 @@ def obtain_stoichiometry_of_species(solution, species, reaction):
         return product_stoich_coeff - reactant_stoich_coeff
     raise Exception('Species {} is not in reaction {}'.format(species,reaction))
 
+def branching_ratios(df, solution, compound):
+    """
+    This method looks at the consumption pathways of `compound` over
+    all time points in the data set.
+    It outputs a pandas.DataFrame which contains columns of pertinant reactions
+    and values of the branching ratio of each reaction which is defined as 
+    
+    $BR_{i} = \frac{ROC_i}{\Sigma_{j=0}^{j=N} ROC_j   }$
+    
+    where $i$ is the reaction in question, $ROC$ is the rate of consumption of
+    the desired species, and $N$ is the number of reactions, and $BR$ is the branching ratio.
+    
+    df = dataframe of run data
+    solution = cantera solution object
+    compound = species string which you want to identify
+    
+    """
+    
+    reaction_dataframe = weight_reaction_dataframe_by_stoich_coefficients(df,solution,compound)
+    
+    #only keep consumption
+    consumption_terms = reaction_dataframe[reaction_dataframe < 0]
+    consumption_terms = consumption_terms.dropna('columns','all')
+    #consumption_terms = consumption_terms.fillna(0)
+    
+    total = consumption_terms.sum('columns')
+    #print(total)
+    branching_ratios = consumption_terms.div(total,'index')
+    branching_ratios = branching_ratios.fillna(0)
+    
+    #sort from most important
+    importance_index = branching_ratios.sum('index').sort_values(ascending=False)
+    branching_ratios = branching_ratios.reindex_axis(importance_index.index,axis='columns')
+
+    return branching_ratios
+    
+def weight_reaction_dataframe_by_stoich_coefficients(df, solution, species):
+    """
+    returns a dataframe of reactions over time weighted by the stoichiometric
+    coefficient of the species string `species`. 
+    """
+    
+    reactions = find_reactions(df, species)
+    reaction_strings = list(reactions.columns)
+    stoichiometries = obtain_stoichiometry_of_species(solution,
+                                                      species,
+                                                      reaction_strings)
+    return reactions * stoichiometries
+    
+
 
 ###################################
 # 3a. output data processing methods
@@ -404,7 +464,7 @@ def consumption_pathways(solution,df,species='any',ignore_ignition=True):
     over the entire simulation using
     the forward difference approximation.
     
-    This doesn't take stoichiometric coefficients into account for reactions
+    Postive values indicate production, negative values indicate consumption
     """
 
     df_reactions_weighted = integrate_data(find_reactions(df,species), df['time (s)'])
