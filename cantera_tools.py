@@ -277,6 +277,21 @@ def append_data_to_df(simulator,solution, df, basics= ['time','temperature','pre
     
     return df.append(conditions, ignore_index=True)
 
+def append_forward_and_reverse_reactions_to_dataframe(solution, df):
+    """
+    This method appends the forward and reverse reactions to the dataframe
+    This is inherently separated from the other method because this stores
+    extra data that may only be useful for quassi-steady state analysis
+    
+    """
+    reaction_equations = solution.reaction_equations()
+    forward_reactions = pd.Series(__get_rxn_rate_dict(reaction_equations,solution.forward_rates_of_progress))
+    reverse_reactions = pd.Series(__get_rxn_rate_dict(reaction_equations,solution.reverse_rates_of_progress))
+    
+    forward_reactions.index = pd.MultiIndex.from_product(['forward',forward_reactions.index])
+    reverse_reactions.index = pd.MultiIndex.from_product(['reverse',reverse_reactions.index])
+    
+    return df.append(pd.concat([forward_reactions,reverse_reactions]), ignore_index=True)
     
 def __get_rxn_rate_dict(reaction_equations, net_rates):
     """
