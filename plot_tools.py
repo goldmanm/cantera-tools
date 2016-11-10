@@ -203,9 +203,11 @@ def latexify_legend(legend_string,mode = 'math'):
         for index, string in enumerate(legend_string):
             if irreversible_reaction.search(string) != None:
                 legend_string[index] = re.sub(irreversible_reaction,' ->',string)
+    new_legend = []
     for index,string in enumerate(legend_string):
-        legend_string[index] = prefix + string + sufix
-    return legend_string
+        string = string.replace('#',r'\#')
+        new_legend.append(prefix + string + sufix)
+    return new_legend
     
 ######################################################
 # methods that plot functions and return the figure object
