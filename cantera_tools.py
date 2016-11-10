@@ -280,9 +280,8 @@ def append_data_to_df(simulator,solution, df, basics= ['time','temperature','pre
 def append_forward_and_reverse_reactions_to_dataframe(solution, df):
     """
     This method appends the forward and reverse reactions to the dataframe
-    This is inherently separated from the other method because this stores
-    extra data that may only be useful for quassi-steady state analysis
     
+    I've never used this method, could be deprecitated in the future
     """
     reaction_equations = solution.reaction_equations()
     forward_reactions = pd.Series(__get_rxn_rate_dict(reaction_equations,solution.forward_rates_of_progress))
@@ -293,6 +292,23 @@ def append_forward_and_reverse_reactions_to_dataframe(solution, df):
     
     return df.append(pd.concat([forward_reactions,reverse_reactions]), ignore_index=True)
     
+
+def append_rop_and_roc_to_dataframe(solution, df):
+    """
+    appends rate of production and rate of consumption to dataframe (kmol/m3s)
+    This is inherently separated from the other method because this stores
+    extra data that may only be useful for quassi-steady state analysis
+    """
+    species = solution.species_names
+    production = pd.Series(__get_rxn_rate_dict(species,solution.creation_rates))
+    consumption = pd.Series(__get_rxn_rate_dict(species,solution.destruction_rates))
+    
+    production.index = pd.MultiIndex.from_product(['production',production.index])
+    consumption.index = pd.MultiIndex.from_product(['consumption',consumption.index])
+     
+    return df.append(pd.concat([production,consumption]), ignore_index=True)
+        
+
 def __get_rxn_rate_dict(reaction_equations, net_rates):
     """
     makes a dictionary out of the two inputs. If identical reactions are encountered,
@@ -358,9 +374,7 @@ def branching_ratios(df, solution, compound):
     df = dataframe of run data
     solution = cantera solution object
     compound = species string which you want to identify
-    
     """
-    
     reaction_dataframe = weight_reaction_dataframe_by_stoich_coefficients(df,solution,compound)
     
     #only keep consumption
@@ -495,6 +509,18 @@ def consumption_pathways(solution,df,species='any',ignore_ignition=True):
         reactions_weighted *= stoich_coeff_dict
     return reactions_weighted.sort_values()
 
+def quasi_steady_state(df, species):
+    """
+    This method outputs the key parameter in quassi steady state
+    approximation. 
+    
+    df = pd.DataFrame with format similar to `append_rop_and_roc_to_dataframe`
+    species = string of species to use
+    
+    returns a pd.Series of the qss apprixmation: $\frac{|ROP-ROC|}{ROP}$
+    """
+    return (df['production',species] - df['consumption',species]) / df['production',species]
+    
 
 def compare_species_profile_at_one_time(desired_time, df1,df2,
                                         minimum_return_value=1e-13,
