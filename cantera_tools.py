@@ -64,6 +64,9 @@ def get_initial_mole_fractions(stoich_ratio,
         fuel_zip =  [(fuels[index],normalized_mole_fractions[index+2]) for index in range(len(fuels))]
         air_zip = [('N2',normalized_mole_fractions[0]),('O2',normalized_mole_fractions[1])]
         mole_fraction_dictionary = dict(air_zip+fuel_zip)
+        for species, fraction in list(mole_fraction_dictionary.items()):
+            if fraction < 1e-10:
+                del mole_fraction_dictionary[species]
         return mole_fraction_dictionary
     else:
         return normalized_mole_fractions
