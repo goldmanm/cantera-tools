@@ -147,7 +147,8 @@ def find_ignition_delay(solution, conditions,
                       condition_type = 'adiabatic-constant-volume',
                       output_profile = False,
                       temp_final = 965,
-                      output_reactions = True,):
+                      output_reactions = True,
+                      output_rop_roc = False):
     """
     This method finds the ignition delay of a cantera solution object with
     an option to return all species and reactions as a pandas.DataFrame object
@@ -177,7 +178,15 @@ def find_ignition_delay(solution, conditions,
     if output_profile:
         df = pd.DataFrame()
         df = append_data_to_df(simulator, solution, df, add_rxns=output_reactions)
-
+    else:
+        df = None
+        
+    if output_rop_roc:
+        rop_roc = pd.DataFrame()
+        rop_roc = append_rop_and_roc_to_dataframe(solution, rop_roc)
+    else:
+        rop_roc = None
+    
         
     # run simulation
     time_final = 500 #seconds
@@ -185,11 +194,11 @@ def find_ignition_delay(solution, conditions,
         simulator.step(time_final)
         if output_profile:
             df = append_data_to_df(simulator,solution,df, add_rxns=output_reactions)
+        if output_rop_roc:
+            rop_roc = append_rop_and_roc_to_dataframe(solution, rop_roc)
+    
+    return simulator.time, df, rop_roc
 
-    if output_profile:
-        return simulator.time, df
-    else:
-        return simulator.time, None
 
 ###################################
 # 1d. saving data
@@ -297,7 +306,7 @@ def append_rop_and_roc_to_dataframe(solution, df):
     """
     appends rate of production and rate of consumption to dataframe (kmol/m3s)
     This is inherently separated from the other method because this stores
-    extra data that may only be useful for quassi-steady state analysis
+    extra data that may only be useful for quasi-steady state analysis
     """
     species = solution.species_names
     production = pd.Series(__get_rxn_rate_dict(species,solution.creation_rates))
@@ -511,7 +520,7 @@ def consumption_pathways(solution,df,species='any',ignore_ignition=True):
 
 def quasi_steady_state(df, species):
     """
-    This method outputs the key parameter in quassi steady state
+    This method outputs the key parameter in quasi steady state
     approximation. 
     
     df = pd.DataFrame with format similar to `append_rop_and_roc_to_dataframe`
@@ -519,7 +528,7 @@ def quasi_steady_state(df, species):
     
     returns a pd.Series of the qss apprixmation: $\frac{|ROP-ROC|}{ROP}$
     """
-    return (df['production',species] - df['consumption',species]) / df['production',species]
+    return (df['production',species] - df['consumption',species]).abs() / df['production',species]
     
 
 def compare_species_profile_at_one_time(desired_time, df1,df2,
