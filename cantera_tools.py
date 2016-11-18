@@ -315,8 +315,11 @@ def append_rop_and_roc_to_dataframe(solution, df):
     production = pd.Series(__get_rxn_rate_dict(species,solution.creation_rates))
     consumption = pd.Series(__get_rxn_rate_dict(species,solution.destruction_rates))
     
-    production.index = pd.MultiIndex.from_product(['production',production.index])
-    consumption.index = pd.MultiIndex.from_product(['consumption',consumption.index])
+    assert isinstance(production.index,pd.indexes.base.Index)
+    assert isinstance(consumption.index,pd.indexes.base.Index)
+    
+    production.index = pd.MultiIndex.from_product([['production'],production.index])
+    consumption.index = pd.MultiIndex.from_product([['consumption'],consumption.index])
      
     return df.append(pd.concat([production,consumption]), ignore_index=True)
         
