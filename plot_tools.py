@@ -182,6 +182,15 @@ def place_legend_outside_plot(axis,legend_entry= None):
     this method takes an axis object and the text of the legend, and
     it places the legend to the right of the figure, making the figure
     less wide.
+    
+    usage in normal contexts:
+    
+    ```
+    f = plt.figure()
+    [run plotting functions]
+    ax = f.get_axes()[0]
+    ptt.place_legend_outside_plot(axis=ax,legend_entry= ['a','b','c'])
+    ```
     """
     if legend_entry != None:
         axis.legend(legend_entry, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
