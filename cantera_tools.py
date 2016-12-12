@@ -494,8 +494,8 @@ def return_nearest_time_index(desired_time,time_series,index=True):
     """
     nearest_value = lambda value, array: np.argmin(abs(value-array))
     if index:
-        return nearest_value(0.4,time_series)
-    return time_series[nearest_value(0.4,time_series)]
+        return nearest_value(desired_time,time_series)
+    return time_series[nearest_value(desired_time,time_series)]
 
 ###################################
 # 3b. output data analysis
@@ -543,7 +543,7 @@ def compare_species_profile_at_one_time(desired_time, df1,df2,
     """
     compares the species profile between two models closest to the desired time
     returns a pandas.Series object with the relative species concentrations
-    given by `compare_2_data_sets
+    given by `compare_2_data_sets`
     """
     
     time_index_1 = return_nearest_time_index(desired_time,df1[time_string])
