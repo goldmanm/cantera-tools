@@ -201,6 +201,8 @@ def latexify_legend(legend_string,mode = 'math'):
     """makes the legend string interpreted able to be interpreted
     by adding a 
     """
+    prefix = r''
+    sufix = r''
     if mode =='math':
         prefix = r'$'
         sufix = r"$"
@@ -212,6 +214,9 @@ def latexify_legend(legend_string,mode = 'math'):
         for index, string in enumerate(legend_string):
             if irreversible_reaction.search(string) != None:
                 legend_string[index] = re.sub(irreversible_reaction,' ->',string)
+    elif mode =='no underscores':
+        for index, string in enumerate(legend_string):
+            legend_string[index] = string.replace(r'_',r' ')
     new_legend = []
     for index,string in enumerate(legend_string):
         string = string.replace('#',r'\#')
