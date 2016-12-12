@@ -38,8 +38,7 @@ I might want to look into compatibility with the seaborn package.
 """
 def general_changes():
     mpl.rcParams['figure.figsize'] = (12.0,8.0) # default = (6.0, 4.0)
-    mpl.rcParams['figure.dpi'] = 300
-    mpl.rcParams['savefig.dpi'] = 300
+    improve_dpi()
     use_tex()
 
 def use_tex():
@@ -47,6 +46,9 @@ def use_tex():
     mpl.rcParams['text.latex.unicode'] = True
     mpl.rcParams['text.latex.preamble'] = [r"\usepackage[version=4]{mhchem}"]
 
+def improve_dpi():
+    mpl.rcParams['figure.dpi'] = 300
+    mpl.rcParams['savefig.dpi'] = 300
 
 def set_linear_tick_locator_for_mpl(self,axis):
     """Hack to limit number of labels automatically
