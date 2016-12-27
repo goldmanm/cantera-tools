@@ -155,11 +155,13 @@ def find_ignition_delay(solution, conditions,
     """
     This method finds the ignition delay of a cantera solution object with
     an option to return all species and reactions as a pandas.DataFrame object
-    which can be stored. The simulation uses a hard-temperature cutoff to determine
-    ignition. 
+    which can be stored. 
     
-    This method returns a tuple with ignition delay and the DataFrame (or `None`)
-    if not specified. 
+    The method calculates ignition delay by 
+    
+    This method returns a tuple with ignition delay and the species and 
+    reaction data, and the rate of production and consumption (or `None`
+    if not specified). 
     
     `solution` = Cantera.Solution object
     `conditions` = tuple of temperature, pressure, and mole fraction initial species
@@ -193,14 +195,29 @@ def find_ignition_delay(solution, conditions,
         
     # run simulation
     time_final = 500 #seconds
-    while simulator.time < time_final and reactor.T < temp_final:
+    old_time = -1
+    old_temp = reactor.T
+    max_dTdt = 0
+    max_dTdt_time = 0
+    while simulator.time < time_final:
+        if time_final == 500 and reactor.T > temp_final:
+            time_final = simulator.time * 1.1
         simulator.step(time_final)
         if output_profile:
             df = append_data_to_df(simulator,solution,df, add_rxns=output_reactions)
         if output_rop_roc:
             rop_roc = append_rop_and_roc_to_dataframe(solution, rop_roc)
+        
+        # find ignition delay
+        dTdt = (reactor.T - old_temp) / (simulator.time - old_time)
+        if dTdt > max_dTdt:
+            max_dTdt = dTdt
+            max_dTdt_time = simulator.time
+        old_temp = reactor.T
+        old_time = simulator.time
     
-    return simulator.time, df, rop_roc
+    return max_dTdt_time, df, rop_roc
+
 
 
 ###################################
@@ -446,6 +463,20 @@ def integrate_data(df, integration_column):
     time_intervals.iloc[0] = 0
     return df.mul(time_intervals, axis='index')
     
+def diff_data(df, differentiation_column):
+    """
+    Takes a data frame and performs an integration 
+    of each column over the `integration_column`, 
+    which is a pandas.Series object.
+    """
+    if isinstance(df,pd.DataFrame):
+        numerator_difference = df.diff(axis='index')
+    else:
+        numerator_difference = df.diff()
+    denominator_difference = differentiation_column.diff()
+    derivative = numerator_difference.div( denominator_difference, axis='index')
+    derivative.iloc[0] = 0
+    return derivative
 
 def find_reactions(df,species='any'):
     """
