@@ -201,7 +201,7 @@ def find_ignition_delay(solution, conditions,
     max_dTdt_time = 0
     while simulator.time < time_final:
         if time_final == 500 and reactor.T > temp_final:
-            time_final = simulator.time * 1.1
+            time_final = simulator.time * 1.03 # go just beyond the final temperature
         simulator.step(time_final)
         if output_profile:
             df = append_data_to_df(simulator,solution,df, add_rxns=output_reactions)
