@@ -45,7 +45,12 @@ def use_tex():
     mpl.rcParams['text.usetex'] = True
     mpl.rcParams['text.latex.unicode'] = True
     mpl.rcParams['text.latex.preamble'] = [r"\usepackage[version=4]{mhchem}"]
+    #mpl.rcParams['text.latex.preamble'] = [r"\usepackage[version=4]{mhchem}",r'\usepackage{arev}']
 
+def disable_tex():
+    mpl.rcParams['text.usetex'] = False
+    mpl.rcParams['text.latex.unicode'] = False
+                 
 def improve_dpi():
     mpl.rcParams['figure.dpi'] = 300
     mpl.rcParams['savefig.dpi'] = 300
