@@ -215,6 +215,7 @@ def find_ignition_delay(solution, conditions,
                       condition_type = 'adiabatic-constant-volume',
                       output_profile = False,
                       temp_final = 965,
+                      time_final = 1000,
                       output_reactions = True,
                       output_rop_roc = False):
     """
@@ -264,7 +265,6 @@ def find_ignition_delay(solution, conditions,
     
         
     # run simulation
-    time_final = 1000 #seconds
     old_time = -1
     old_temp = reactor.T
     max_dTdt = 0
