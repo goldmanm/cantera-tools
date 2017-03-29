@@ -134,7 +134,82 @@ def eliminate_species_from_mechanism(species_list, kept_reactions,inert_species)
 # 1c. run mechanism
 ###################################
 
+def run_simulation(solution, conditions, times,
+                      condition_type = 'adiabatic-constant-volume',
+                      output_species = True,
+                      output_reactions = True,
+                      output_directional_reactions = False,
+                      output_rop_roc = False):
+    """
+    This method iterates through the cantera solution object and outputs information
+    about the simulation as a pandas.DataFrame object.
+    
+    This method returns a dictionary with the reaction conditions data, species data,
+    net reaction data, forward/reverse reaction data, and the rate of production 
+    and consumption (or `None` if a variable not specified). 
+    
+    `solution` = Cantera.Solution object
+    `conditions` = tuple of temperature, pressure, and mole fraction initial 
+                species
+    `times` = an iterable of times which you would like to store information in
+    `condition_type` = string describing the run type, currently supports 
+                'adiabatic-constant-volume' and 'constant-temperature-and-pressure'
+    `output_species` = output a DataFrame of species' concentrations
+    `output_reactions` = output a DataFrame of net reaction rates
+    `output_directional_reactions` = output a DataFrame of directional reaction rates
+    `output_rop_roc` = output a DataFrame of species rates of consumption & production
+    """
+    solution.TPX = conditions
+    if condition_type == 'adiabatic-constant-volume':
+        reactor = ct.IdealGasReactor(solution)
+    if condition_type == 'constant-temperature-and-pressure':
+        reactor = ct.IdealGasConstPressureReactor(solution, energy='off')
+    else:
+        raise NotImplementedError('only adiabatic constant volume is supported')
+    simulator = ct.ReactorNet([reactor])
+    solution = reactor.kinetics
 
+    # setup data storage
+    outputs = {}
+    outputs['conditions'] = pd.DataFrame()
+    if output_species:
+        outputs['species'] = pd.DataFrame()
+    if output_reactions:
+        outputs['net_reactions'] = pd.DataFrame()
+    if output_directional_reactions:
+        outputs['directional_reactions'] = pd.DataFrame()
+    if output_rop_roc:
+        outputs['rop'] = pd.DataFrame()
+
+    for time in times:
+        simulator.advance(time)
+        # save data
+        outputs['conditions'] = outputs['conditions'].append(
+                                get_conditions_series(simulator,solution),
+                                ignore_index = True)
+        if output_species:
+            outputs['species'] = outputs['species'].append(
+                                get_species_series(solution),
+                                ignore_index = True)
+        if output_reactions:
+            outputs['net_reactions'] = outputs['net_reactions'].append(
+                                get_reaction_series(solution),
+                                ignore_index = True)
+        if output_directional_reactions:
+            outputs['directional_reactions'] = outputs['directional_reactions'].append(
+                                get_forward_and_reverse_reactions_series(solution),
+                                ignore_index = True)
+        if output_rop_roc:
+            outputs['rop'] = outputs['rop'].append(
+                                get_rop_and_roc_series(solution),
+                                ignore_index = True)
+
+    # set indexes as time
+    time_vector = outputs['conditions']['time (s)']
+    for output in outputs.values():
+        output.set_index(time_vector,inplace=True)
+
+    return outputs
 
 def find_ignition_delay(solution, conditions, 
                       condition_type = 'adiabatic-constant-volume',
