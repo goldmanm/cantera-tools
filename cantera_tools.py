@@ -134,6 +134,8 @@ def eliminate_species_from_mechanism(species_list, kept_reactions,inert_species)
 # 1c. run mechanism
 ###################################
 
+
+
 def find_ignition_delay(solution, conditions, 
                       condition_type = 'adiabatic-constant-volume',
                       output_profile = False,
@@ -157,7 +159,8 @@ def find_ignition_delay(solution, conditions,
     `solution` = Cantera.Solution object
     `conditions` = tuple of temperature, pressure, and mole fraction initial species
     `condition_type` = string describing the run type, currently only 'adiabatic-constant-volume' supported
-    `output_profile` = should the program save simulation results and output them
+    `output_profile` = should the program save simulation results and output them (True),
+                        or should it just give the ignition delay (False)
     `temp_final` = the temperature which the ignition is reported
     `output_reactions` = should the data contain reactions as well. If
             output_profile is False, this has no effect
@@ -173,13 +176,14 @@ def find_ignition_delay(solution, conditions,
     # setup data storage
     if output_profile:
         df = pd.DataFrame()
-        df = append_data_to_df(simulator, solution, df, add_rxns=output_reactions)
+        df = df.append(get_data_series(simulator, solution, 
+                                       add_rxns=output_reactions), ignore_index = True)
     else:
         df = None
         
     if output_rop_roc:
         rop_roc = pd.DataFrame()
-        rop_roc = append_rop_and_roc_to_dataframe(solution, rop_roc)
+        rop_roc = rop_roc.append(get_rop_and_roc_series(solution))
     else:
         rop_roc = None
     
@@ -195,9 +199,10 @@ def find_ignition_delay(solution, conditions,
             time_final = simulator.time * 1.03 # go just beyond the final temperature
         simulator.step(time_final)
         if output_profile:
-            df = append_data_to_df(simulator,solution,df, add_rxns=output_reactions)
+            df = df.append(get_data_series(simulator,solution,
+                                           add_rxns=output_reactions),ignore_index = True)
         if output_rop_roc:
-            rop_roc = append_rop_and_roc_to_dataframe(solution, rop_roc)
+            rop_roc = rop_roc.append(get_rop_and_roc_series(solution), ignore_index = True)
         
         # find ignition delay
         dTdt = (reactor.T - old_temp) / (simulator.time - old_time)
@@ -209,29 +214,40 @@ def find_ignition_delay(solution, conditions,
     
     return max_dTdt_time, df, rop_roc
 
-
-
 ###################################
 # 1d. saving data
 ###################################
 
-def append_data_to_df(simulator,solution, df, basics= ['time','temperature','pressure','density'],
+def get_data_series(simulator,solution, basics= ['time','temperature','pressure','density'],
                       add_species = True, species_names='all',
                       add_rxns = False, reaction_names='all'):
     """
-    appends the current conditions of a Solution object contianing ReactorNet
-    object (simulator) to the pandas.dataframe object (df). 
+    a wrapper function of `get_conditions_series`, `get_species_series`, and 
+    `get_reaction_series`, which may be depreciated in the future
+    """
+
+    conditions = get_conditions_series(simulator,solution, basics)
+
+    if add_species:
+        species_series = get_species_series(solution, species_names)
+        conditions = pd.concat([conditions,species_series])
+
+    if add_rxns:
+        rxn_series = get_reaction_series(solution, reaction_names)
+        conditions = pd.concat([conditions,rxn_series])
+
+    return conditions
+
+def get_conditions_series(simulator, solution, basics= ['time','temperature','pressure','density']):
+    """
+    returns the current conditions of a Solution object contianing ReactorNet
+    object (simulator) as a pd.Series.
     
-    The optional parameters define what is saved.
-    basics = a list of state variables to save: options are time, temperature
-        pressure, density, volume, cp and cv.
-    add_species = save the concentrations of species in kmol/m3.
-    species_names = list of species names to be saved (default is all)
-    add_reactions = save the concentration of reactions in kmol/m3s
-    reaction_names = list of reaction strings to be saved (default is all)
+    simulator = the ReactorNet object of the simulation
+    solution = solution object to pull values from
+    basics =a list of state variables to save 
     
-    
-    The following are enabled for the basics conditions:
+    The following are enabled for the conditions:
     * time
     * temperature
     * pressure
@@ -240,14 +256,7 @@ def append_data_to_df(simulator,solution, df, basics= ['time','temperature','pre
     * cp (constant pressure heat capacity)
     * cv (constant volume heat capacity)
     """
-    
-    # this term is to suppress warning messages during initialization
-    if df.empty:
-        initialization = True
-    else:
-        initialization = False
-    
-    conditions = {}
+    conditions = pd.Series()
     # add regular conditions
     if 'time' in basics:
         conditions['time (s)'] = simulator.time
@@ -263,44 +272,54 @@ def append_data_to_df(simulator,solution, df, basics= ['time','temperature','pre
         conditions['heat capacity, cp (J/kmol/K)'] = solution.cp_mole
     if 'cv' in basics:
         conditions['heat capacity, cv (J/kmol/K)'] = solution.cv_mole
-#    if '' in basics:
-#        conditions[''] = solution.
-    # end adding regular conditions
+    return conditions
 
-
-    if add_species:
-        if species_names=='all':
-            species_recorded = solution.species_names
-        else:
-            species_recorded = species_names
-        mole_fractions = solution.mole_fraction_dict()
-        for name in species_recorded:
-            try:
-                conditions[name] = mole_fractions[name] * solution.density_mole
-            except KeyError:
-                conditions[name] = 0
-                # sends warning if user typed species incorrectly
-                if name in species_names and not initialization:
-                    warnings.warn('{} is not listed in the mole fraction dictionary and may be mispelled.'.format(name))
-    
-    if add_rxns:
-        if reaction_names=='all':
-            reaction_names = solution.reaction_equations()
-            
-        reaction_rates = __get_rxn_rate_dict(solution.reaction_equations(),solution.net_rates_of_progress)
-        for name in reaction_names:
-            try:
-                conditions[name] = reaction_rates[name]
-            except KeyError:
-                conditions[name] = 0
-                warnings.warn('{} is not listed in the reaction names.'.format(name))
-    
-    return df.append(conditions, ignore_index=True)
-
-def append_forward_and_reverse_reactions_to_dataframe(solution, df):
+def get_species_series(solution, species_names = 'all'):
     """
-    This method appends the forward and reverse reactions to the dataframe,
-    and returns the modified dataframe.
+    returns a pandas.Series of the desired species' concentrations
+    
+    solution = the cantera.Solution object for the simulation
+    species_names = list of species names to be saved (default is all)
+    """
+    series = pd.Series()
+    if species_names=='all':
+        species_recorded = solution.species_names
+    else:
+        species_recorded = species_names
+    mole_fractions = solution.mole_fraction_dict()
+    for name in species_recorded:
+        try:
+            series[name] = mole_fractions[name] * solution.density_mole
+        except KeyError:
+            series[name] = 0
+            # sends warning if user typed species incorrectly
+            if name not in solution.species_names:
+                warnings.warn('{} is not listed in the mole fraction dictionary and may be mispelled.'.format(name))
+    return series
+
+def get_reaction_series(solution, reaction_names = 'all'):
+    """
+    returns a pandas.Series of the desired reactions' net rates
+    
+    solution = the cantera.Solution object for the simulation
+    species_names = list of reaction names to be saved (default is all)
+    """
+    series = pd.Series()
+    if reaction_names=='all':
+        reaction_names = solution.reaction_equations()
+
+    reaction_rates = __get_rxn_rate_dict(solution.reaction_equations(),solution.net_rates_of_progress)
+    for name in reaction_names:
+        try:
+            series[name] = reaction_rates[name]
+        except KeyError:
+            series[name] = 0
+            warnings.warn('{} is not listed in the reaction names.'.format(name))
+    return series
+
+def get_forward_and_reverse_reactions_series(solution):
+    """
+    This method returns a series of the forward and reverse reactions
     """
     reaction_equations = solution.reaction_equations()
     forward_reactions = pd.Series(__get_rxn_rate_dict(reaction_equations,solution.forward_rates_of_progress))
@@ -309,14 +328,12 @@ def append_forward_and_reverse_reactions_to_dataframe(solution, df):
     forward_reactions.index = pd.MultiIndex.from_product([['forward'],forward_reactions.index], names = ['direction','reaction'])
     reverse_reactions.index = pd.MultiIndex.from_product([['reverse'],reverse_reactions.index], names = ['direction','reaction'])
     
-    return df.append(pd.concat([forward_reactions,reverse_reactions]), ignore_index=True)
-    
+    return pd.concat([forward_reactions,reverse_reactions])
 
-def append_rop_and_roc_to_dataframe(solution, df):
+def get_rop_and_roc_series(solution):
     """
-    appends rate of production and rate of consumption to dataframe (kmol/m3s)
-    This is inherently separated from the other method because this stores
-    extra data that may only be useful for quasi-steady state analysis
+    returns rate of production and rate of consumption to dataframe (kmol/m3s)
+    This data is primarily useful for quasi-steady state analysis
     """
     species = solution.species_names
     production = pd.Series(__get_rxn_rate_dict(species,solution.creation_rates))
@@ -328,8 +345,7 @@ def append_rop_and_roc_to_dataframe(solution, df):
     production.index = pd.MultiIndex.from_product([['production'],production.index])
     consumption.index = pd.MultiIndex.from_product([['consumption'],consumption.index])
      
-    return df.append(pd.concat([production,consumption]), ignore_index=True)
-        
+    return pd.concat([production,consumption])
 
 def __get_rxn_rate_dict(reaction_equations, net_rates):
     """
@@ -343,8 +359,6 @@ def __get_rxn_rate_dict(reaction_equations, net_rates):
         except KeyError:
             rxn_dict[equation] = rate
     return rxn_dict
-
-
 
 ###################################
 # 2. cantera mechanism analysis
