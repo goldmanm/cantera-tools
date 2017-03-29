@@ -145,7 +145,10 @@ def find_ignition_delay(solution, conditions,
     an option to return all species and reactions as a pandas.DataFrame object
     which can be stored. 
     
-    The method calculates ignition delay by 
+    The method calculates ignition delay by going until the temperature is near
+    `temp_final`, and then it locates the maximum change in temperature with
+    time, $\frac{\delta T}{\delta t}$. The time value corresponding with the max
+    is the ignition delay
     
     This method returns a tuple with ignition delay and the species and 
     reaction data, and the rate of production and consumption (or `None`
