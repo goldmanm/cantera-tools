@@ -1,13 +1,8 @@
-import math
 import numpy as np
-from scipy import integrate
 import cantera as ct
 import pandas as pd
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 import re
 import warnings
-import plot_tools as ptt
 import copy
 """
 This module contains script methods for analysis of cantera mechanisms.
@@ -21,10 +16,8 @@ divided into:
     d. save data
 2. methods for analyzing the cantera 'Solution' object
 3. methods for analyzing output from cantera runs using the run data (from part 1)
-4. methods for analyzing output using output data and cantera 'Solution' object
-
-
-
+    a. smaller, core methods (derivatives, etc.)
+    b. more applied method (view consumption pathways, QSSA)
 """
 
 
@@ -70,11 +63,6 @@ def get_initial_mole_fractions(stoich_ratio,
         return mole_fraction_dictionary
     else:
         return normalized_mole_fractions
-
-
-
-
-
 
 
 def create_mechanism(full_model_file_path,kept_reaction_equations='all',non_reactive_species = ['AR','N2','HE']):
@@ -157,7 +145,10 @@ def find_ignition_delay(solution, conditions,
     an option to return all species and reactions as a pandas.DataFrame object
     which can be stored. 
     
-    The method calculates ignition delay by 
+    The method calculates ignition delay by going until the temperature is near
+    `temp_final`, and then it locates the maximum change in temperature with
+    time, $\frac{\delta T}{\delta t}$. The time value corresponding with the max
+    is the ignition delay
     
     This method returns a tuple with ignition delay and the species and 
     reaction data, and the rate of production and consumption (or `None`
@@ -308,16 +299,15 @@ def append_data_to_df(simulator,solution, df, basics= ['time','temperature','pre
 
 def append_forward_and_reverse_reactions_to_dataframe(solution, df):
     """
-    This method appends the forward and reverse reactions to the dataframe
-    
-    I've never used this method, could be deprecitated in the future
+    This method appends the forward and reverse reactions to the dataframe,
+    and returns the modified dataframe.
     """
     reaction_equations = solution.reaction_equations()
     forward_reactions = pd.Series(__get_rxn_rate_dict(reaction_equations,solution.forward_rates_of_progress))
     reverse_reactions = pd.Series(__get_rxn_rate_dict(reaction_equations,solution.reverse_rates_of_progress))
     
-    forward_reactions.index = pd.MultiIndex.from_product(['forward',forward_reactions.index])
-    reverse_reactions.index = pd.MultiIndex.from_product(['reverse',reverse_reactions.index])
+    forward_reactions.index = pd.MultiIndex.from_product([['forward'],forward_reactions.index], names = ['direction','reaction'])
+    reverse_reactions.index = pd.MultiIndex.from_product([['reverse'],reverse_reactions.index], names = ['direction','reaction'])
     
     return df.append(pd.concat([forward_reactions,reverse_reactions]), ignore_index=True)
     
@@ -443,7 +433,7 @@ def weight_reaction_dataframe_by_stoich_coefficients(df, solution, species):
 ###################################
 # 3a. output data processing methods
 # these methods are less likely to be useful by themselves.
-# many methods in 3b call these
+# many methods in 3b call methods in 3a
 ###################################
 
 def remove_ignition(df, percent_cutoff=0.98):
@@ -465,8 +455,8 @@ def integrate_data(df, integration_column):
     
 def diff_data(df, differentiation_column):
     """
-    Takes a data frame and performs an integration 
-    of each column over the `integration_column`, 
+    Takes a data frame and performs an derivative
+    of each column with respect to the `differentiation_column`, 
     which is a pandas.Series object.
     """
     if isinstance(df,pd.DataFrame):
@@ -499,7 +489,6 @@ def find_reactions(df,species='any'):
 def _prepare_string_for_re_processing(string):
     """ used for allowing parenthesis in species when searching reactions"""
     return string.replace('(','\(').replace(')','\)')
-
 
 def find_species(df):
     """
@@ -611,10 +600,3 @@ def _compare_2_data_sets(model1, model2, minimum_return_value = 1000,diff_return
             compared_values[label] = np.nan
     compared_values = compared_values.dropna()
     return compared_values.sort_values()
-    
-
-
-###################################
-# 4. plotting
-# this includes plotting functions specific to cantera 
-###################################
