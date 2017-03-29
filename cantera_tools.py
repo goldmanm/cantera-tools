@@ -205,6 +205,9 @@ def run_simulation(solution, conditions, times,
                                 ignore_index = True)
 
     # set indexes as time
+    time_vector = outputs['conditions']['time (s)']
+    for output in outputs.values():
+        output.set_index(time_vector,inplace=True)
 
     return outputs
 
