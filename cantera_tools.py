@@ -216,6 +216,7 @@ def find_ignition_delay(solution, conditions,
                       output_profile = False,
                       temp_final = 965,
                       time_final = 1000,
+                      skip_data = 150,
                       output_reactions = True,
                       output_rop_roc = False):
     """
@@ -238,6 +239,10 @@ def find_ignition_delay(solution, conditions,
     `output_profile` = should the program save simulation results and output them (True),
                         or should it just give the ignition delay (False)
     `temp_final` = the temperature which the ignition is reported
+    `time_final` = the time to cut off the simulation if the temperature never
+                    reaches `temp_final`
+    `skip_data` = an integer which reduces storing each point of data.
+                    storage space scales as 1/`skip_data`
     `output_reactions` = should the data contain reactions as well. If
             output_profile is False, this has no effect
     """
@@ -269,23 +274,27 @@ def find_ignition_delay(solution, conditions,
     old_temp = reactor.T
     max_dTdt = 0
     max_dTdt_time = 0
+    data_storage = 1e8
     while simulator.time < time_final:
-        if time_final == 500 and reactor.T > temp_final:
-            time_final = simulator.time * 1.03 # go just beyond the final temperature
         simulator.step(time_final)
-        if output_profile:
-            df = df.append(get_data_series(simulator,solution,
-                                           add_rxns=output_reactions),ignore_index = True)
-        if output_rop_roc:
-            rop_roc = rop_roc.append(get_rop_and_roc_series(solution), ignore_index = True)
-        
-        # find ignition delay
-        dTdt = (reactor.T - old_temp) / (simulator.time - old_time)
-        if dTdt > max_dTdt:
-            max_dTdt = dTdt
-            max_dTdt_time = simulator.time
-        old_temp = reactor.T
-        old_time = simulator.time
+        if data_storage > skip_data:
+            data_storage = 1
+            if time_final == 500 and reactor.T > temp_final:
+                time_final = simulator.time * 1.03 # go just beyond the final temperature
+            if output_profile:
+                df = df.append(get_data_series(simulator,solution,
+                                               add_rxns=output_reactions),ignore_index = True)
+            if output_rop_roc:
+                rop_roc = rop_roc.append(get_rop_and_roc_series(solution), ignore_index = True)
+            
+            # find ignition delay
+            dTdt = (reactor.T - old_temp) / (simulator.time - old_time)
+            if dTdt > max_dTdt:
+                max_dTdt = dTdt
+                max_dTdt_time = simulator.time
+            old_temp = reactor.T
+            old_time = simulator.time
+        data_storage += 1
     
     return max_dTdt_time, df, rop_roc
 
