@@ -640,7 +640,7 @@ def consumption_pathways(solution,df,species='any',ignore_ignition=True, time = 
             last_index = df.shape[0]-1
         reactions_weighted = df_reactions_weighted[df.index<last_index].sum()
     else:
-        reactions_weighted = find_reactions(df,species).iloc[return_nearest_time_index(time,df['time (s)']),:]
+        reactions_weighted = find_reactions(df,species).loc[return_nearest_time_index(time,df['time (s)'], index=False),:]
         
     if species != 'any': # weight to stoich coefficients
         stoich_coeffs = [obtain_stoichiometry_of_species(solution, species, reaction) for reaction in reactions_weighted.index]
