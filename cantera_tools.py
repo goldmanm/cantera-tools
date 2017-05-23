@@ -139,7 +139,9 @@ def run_simulation(solution, conditions, times,
                       output_species = True,
                       output_reactions = True,
                       output_directional_reactions = False,
-                      output_rop_roc = False):
+                      output_rop_roc = False,
+                      atol = 1e-15,
+                      rtol = 1e-9):
     """
     This method iterates through the cantera solution object and outputs information
     about the simulation as a pandas.DataFrame object.
@@ -168,7 +170,8 @@ def run_simulation(solution, conditions, times,
         raise NotImplementedError('only adiabatic constant volume is supported')
     simulator = ct.ReactorNet([reactor])
     solution = reactor.kinetics
-
+    simulator.atol = atol
+    simulator.rtol = rtol
     # setup data storage
     outputs = {}
     outputs['conditions'] = pd.DataFrame()
