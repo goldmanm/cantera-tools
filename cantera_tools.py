@@ -447,6 +447,61 @@ def __get_rxn_rate_dict(reaction_equations, net_rates):
             rxn_dict[equation] = rate
     return rxn_dict
 
+def save_flux_diagrams(solution, conditions, times,
+                      condition_type = 'adiabatic-constant-volume',
+                      path = '.', element = 'C', filename= 'flux_diagram',
+                              filetype = 'png'):
+    """
+    This method is similar to run_simulation but it saves reaction path
+    diagrams instead of returning objects.
+    """
+    solution.TPX = conditions
+    if condition_type == 'adiabatic-constant-volume':
+        reactor = ct.IdealGasReactor(solution)
+    elif condition_type == 'constant-temperature-and-pressure':
+        reactor = ct.IdealGasConstPressureReactor(solution, energy='off')
+    else:
+        raise NotImplementedError('only "adiabatic-constant-volume" or "constant-temperature-and-pressure" is supported. {} input'.format(condition_type))
+    simulator = ct.ReactorNet([reactor])
+    solution = reactor.kinetics
+
+    for time in times:
+        simulator.advance(time)
+        
+        save_flux_diagram(solution,filename=filename+'_{:.2e}s'.format(simulator.time),
+                              path = path, element=element, filetype = filetype)
+
+def save_flux_diagram(kinetics, path = '.', element = 'C', filename= 'flux_diagram',
+                              filetype = 'png'):
+    """
+    makes a flux diagram and saves it to the designated file.
+    
+    kinetics is a solution object
+    path is the path to the designated storage
+    element is the element to be traced. Isotopes can also count
+    filename is the filename to store it as
+    filetype is the type to store the file as (any availalbe from http://graphviz.org/doc/info/output.html)
+    """
+    import os
+
+    diagram = ct.ReactionPathDiagram(kinetics, element)
+    diagram.label_threshold = 0.01
+
+    dot_file = 'temp.dot'
+    img_file = filename + '.' + filetype
+    img_path = os.path.join(path, img_file)
+
+    diagram.write_dot(dot_file)
+
+
+    error = os.system('dot {0} -T{2} -o{1} -Gdpi=200'.format(dot_file, img_path,filetype))
+
+    if error:
+        raise OSError('dot was not able to create the desired image')
+    else:
+        print("Wrote graphviz output file to '{0}'.".format(img_path))
+    os.remove(dot_file)
+
 ###################################
 # 2. cantera mechanism analysis
 ###################################
