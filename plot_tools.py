@@ -184,7 +184,7 @@ def set_colors(number_colors=10,name = 'viridis'):
     colors = _get_color_list_from_colormap( name, number_colors)
     mpl.rcParams['axes.prop_cycle'] = cycler('color',colors)
 
-def place_legend_outside_plot(axis,legend_entry= None):
+def place_legend_outside_plot(axis,legend_entry= None, legend_icons=None):
     """
     this method takes an axis object and the text of the legend, and
     it places the legend to the right of the figure, making the figure
@@ -198,12 +198,30 @@ def place_legend_outside_plot(axis,legend_entry= None):
     ax = f.get_axes()[0]
     ptt.place_legend_outside_plot(axis=ax,legend_entry= ['a','b','c'])
     ```
-    """
-    if legend_entry != None:
-        axis.legend(legend_entry, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
-    else:
-        axis.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
     
+    another argument `legend_icons` is a list of matplotlib drawing objects
+    which can replace the default lines in the figure.
+    
+    This method may be depreciated and just retain `legend_outside_kwargs` since 
+    it follows OOP principles better
+    """
+    if isinstance(legend_icons, list):
+        axis.legend(legend_icons, legend_entry, 
+                    **legend_outside_kwargs())
+    elif isinstance(legend_entry, list):
+        axis.legend(legend_entry, 
+                    **legend_outside_kwargs())
+    else:
+        axis.legend(**legend_outside_kwargs())
+    
+def legend_outside_kwargs(location = 'right'):
+    
+    if location == 'right':
+        return {bbox_to_anchor:(1.05, 1), loc:2, borderaxespad:0.}
+    elif location == 'bottom':
+        return {bbox_to_anchor:(0, -.15), loc:2, borderaxespad:0.}
+    else:
+        raise ValueError("Only legend locations right and bottom currently supported")
 def latexify_legend(legend_string,mode = 'math'):
     """makes the legend string interpreted able to be interpreted
     by adding a 
