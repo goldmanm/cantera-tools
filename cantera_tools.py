@@ -577,7 +577,7 @@ def weight_reaction_dataframe_by_stoich_coefficients(df, solution, species):
     coefficient of the species string `species`. 
     """
     
-    reactions = find_reactions(df, species)
+    reactions = find_reactions( solution, df, species)
     reaction_strings = list(reactions.columns)
     stoichiometries = obtain_stoichiometry_of_species(solution,
                                                       species,
@@ -624,20 +624,30 @@ def diff_data(df, differentiation_column):
     derivative.iloc[0] = 0
     return derivative
 
-def find_reactions(df,species='any'):
+def find_reactions(solution, df,species='any'):
     """
     finds the reaction columns in the dataframe and returns them
     if a string, species, is specified, it will only return reactions
     with the matching species.
     """
-    
     # find reaction columns
     df_reactions = df.loc[:,['=' in column for column in df.columns]]
     if species =='any':
         return df_reactions
-    string = _prepare_string_for_re_processing(species)
-    expression = r'(\A|\s)%s(\Z|\s)' %(string)
-    df_my_reactions = df_reactions.loc[:,[re.compile(expression).search(column) != None for column in df_reactions.columns]]
+    # not needed since using solution object
+    #string = _prepare_string_for_re_processing(species)
+    #expression = r'(\A|\s)%s(\Z|\s)' %(string)
+    #df_my_reactions = df_reactions.loc[:,[re.compile(expression).search(column) != None for column in df_reactions.columns]]
+    included_columns = []
+    reaction_strings = solution.reaction_equations()
+    #print df_reactions.shape
+    #print len(reaction_strings)
+    for index, rxn_name in enumerate(reaction_strings):
+        if solution.product_stoich_coeff(species,index) !=0 or solution.reactant_stoich_coeff(species,index) !=0:
+            included_columns.append(rxn_name)
+    #print included_columns
+    df_my_reactions = df_reactions[included_columns]
+    
     if df_my_reactions.empty:
         raise Exception('No reactions found for species {}'.format(species))
     return df_my_reactions
@@ -691,19 +701,24 @@ def consumption_pathways(solution,df,species='any',ignore_ignition=True, time = 
     """
     
     if time=='all':
-        df_reactions_weighted = integrate_data(find_reactions(df,species), df['time (s)'])
+        df_reactions_weighted = integrate_data(find_reactions(solution, df,species), df['time (s)'])
         if ignore_ignition:
             last_index = remove_ignition(df).shape[0] 
         else:
             last_index = df.shape[0]-1
         reactions_weighted = df_reactions_weighted[df.index<last_index].sum()
     else:
-        reactions_weighted = find_reactions(df,species).loc[return_nearest_time_index(time,df['time (s)'], index=False),:]
-        
+        try:
+            reactions_weighted = find_reactions(solution, df,species).loc[time,:]
+        except KeyError:
+            reactions_weighted = find_reactions(solution, df,species).loc[return_nearest_time_index(time,df['time (s)'], index=False),:]
     if species != 'any': # weight to stoich coefficients
         stoich_coeffs = [obtain_stoichiometry_of_species(solution, species, reaction) for reaction in reactions_weighted.index]
         stoich_coeff_dict = pd.Series(dict(zip(reactions_weighted.index,stoich_coeffs)))
-        reactions_weighted *= stoich_coeff_dict
+        # pandas was having some bug, so manually rewrote the line below
+        #reactions_weighted *= stoich_coeff_dict
+        for index in stoich_coeff_dict.index:
+            reactions_weighted[index] *= stoich_coeff_dict[index]
     return reactions_weighted.sort_values()
 
 def quasi_steady_state(df, species):
