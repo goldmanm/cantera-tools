@@ -76,16 +76,16 @@ def set_log_tick_locator_for_mpl(self,axis):
     http://stackoverflow.com/questions/10437689/matplotlib-globally-set-number-of-ticks-x-axis-y-axis-colorbar"
     """
 
-    axis.set_major_locator(mpl.ticker.LogLocator(self.base,numticks=3))
+    axis.set_major_locator(mpl.ticker.LogLocator(self.base,numticks=mpl.ticker.MaxNLocator.default_params['nbins']))
     axis.set_major_formatter(mpl.ticker.LogFormatterMathtext(self.base))
     axis.set_minor_locator(mpl.ticker.LogLocator(self.base, self.subs))
     axis.set_minor_formatter(mpl.ticker.NullFormatter())
     
 def reduce_labels(nlabels = 3):
     # make MaxNLocator default
+    mpl.ticker.MaxNLocator.default_params['nbins'] = nlabels-1 #this might 
     mpl.scale.LinearScale.set_default_locators_and_formatters = set_linear_tick_locator_for_mpl
     mpl.scale.LogScale.set_default_locators_and_formatters = set_log_tick_locator_for_mpl
-    mpl.ticker.MaxNLocator.default_params['nbins'] = nlabels-1 #this might 
     
 def presentation():
     reduce_labels()
