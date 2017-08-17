@@ -214,6 +214,71 @@ def run_simulation(solution, conditions, times,
 
     return outputs
 
+def run_simulation_till_conversion(solution, conditions, species, conversion,
+                      condition_type = 'adiabatic-constant-volume',
+                      output_species = True,
+                      output_reactions = True,
+                      output_directional_reactions = False,
+                      output_rop_roc = False,
+                      atol = 1e-15,
+                      rtol = 1e-9,):
+    """
+    This method iterates through the cantera solution object and outputs information
+    about the simulation as a pandas.DataFrame object.
+
+    This method returns a dictionary with the reaction conditions data, species data,
+    net reaction data, forward/reverse reaction data, and the rate of production 
+    and consumption (or `None` if a variable not specified) at the specified conversion value.
+
+    `solution` = Cantera.Solution object
+    `conditions` = tuple of temperature, pressure, and mole fraction initial 
+                species
+    `species` = a string of the species label to be used in conversion calculations
+    `conversion` = a float of the fraction conversion to stop the simulation at
+    `condition_type` = string describing the run type, currently supports 
+                'adiabatic-constant-volume' and 'constant-temperature-and-pressure'
+    `output_species` = output a Series of species' concentrations
+    `output_reactions` = output a Series of net reaction rates
+    `output_directional_reactions` = output a Series of directional reaction rates
+    `output_rop_roc` = output a DataFrame of species rates of consumption & production
+    """
+    solution.TPX = conditions
+    if condition_type == 'adiabatic-constant-volume':
+        reactor = ct.IdealGasReactor(solution)
+    if condition_type == 'constant-temperature-and-pressure':
+        reactor = ct.IdealGasConstPressureReactor(solution, energy='off')
+    else:
+        raise NotImplementedError('only adiabatic constant volume is supported')
+    simulator = ct.ReactorNet([reactor])
+    solution = reactor.kinetics
+    simulator.atol = atol
+    simulator.rtol = rtol
+
+    target_species_index = solution.species_index(species)
+    starting_concentration = solution.concentrations[target_species_index]
+    proper_conversion = False
+    new_conversion = 0
+    while not proper_conversion:
+        simulator.step()
+        new_conversion = 1-solution.concentrations[target_species_index]/starting_concentration
+        if new_conversion > conversion:
+            proper_conversion = True
+    #print 'terminated at {0} with conversion {1}.'.format(simulator.time, new_conversion)
+    # setup data storage
+    outputs = {}
+    outputs['conditions'] = get_conditions_series(simulator,solution)
+    if output_species:
+        outputs['species'] = get_species_series(solution)
+    if output_reactions:
+        outputs['net_reactions'] = get_reaction_series(solution)
+    if output_directional_reactions:
+        outputs['directional_reactions'] = get_forward_and_reverse_reactions_series(solution)
+    if output_rop_roc:
+        outputs['rop'] = get_rop_and_roc_series(solution)
+
+    return outputs
+
+
 def find_ignition_delay(solution, conditions, 
                       condition_type = 'adiabatic-constant-volume',
                       output_profile = False,
@@ -485,7 +550,7 @@ def save_flux_diagram(kinetics, path = '.', element = 'C', filename= 'flux_diagr
     import os
 
     diagram = ct.ReactionPathDiagram(kinetics, element)
-    diagram.label_threshold = 0.01
+    diagram.label_threshold = 0.000001
 
     dot_file = 'temp.dot'
     img_file = filename + '.' + filetype
