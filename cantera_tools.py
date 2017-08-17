@@ -214,6 +214,96 @@ def run_simulation(solution, conditions, times,
 
     return outputs
 
+def run_simulation_till_conversion_using_advance(solution, conditions, species, min_conversion,
+                                   max_conversion,
+                      condition_type = 'adiabatic-constant-volume',
+                      output_species = True,
+                      output_reactions = True,
+                      output_directional_reactions = False,
+                      output_rop_roc = False,
+                      atol = 1e-15,
+                      rtol = 1e-9,
+                      max_tries = 500,
+                      initial_start_guess = 1e-5):
+    """
+    This method iterates through the cantera solution object and outputs information
+    about the simulation as a pandas.DataFrame object.
+    
+    This method returns a dictionary with the reaction conditions data, species data,
+    net reaction data, forward/reverse reaction data, and the rate of production 
+    and consumption (or `None` if a variable not specified). 
+    
+    `solution` = Cantera.Solution object
+    `conditions` = tuple of temperature, pressure, and mole fraction initial 
+                species
+    `times` = an iterable of times which you would like to store information in
+    `condition_type` = string describing the run type, currently supports 
+                'adiabatic-constant-volume' and 'constant-temperature-and-pressure'
+    `output_species` = output a DataFrame of species' concentrations
+    `output_reactions` = output a DataFrame of net reaction rates
+    `output_directional_reactions` = output a DataFrame of directional reaction rates
+    `output_rop_roc` = output a DataFrame of species rates of consumption & production
+    """
+    solution.TPX = conditions
+    if condition_type == 'adiabatic-constant-volume':
+        reactor = ct.IdealGasReactor(solution)
+    if condition_type == 'constant-temperature-and-pressure':
+        reactor = ct.IdealGasConstPressureReactor(solution, energy='off')
+    else:
+        raise NotImplementedError('only adiabatic constant volume is supported')
+    simulator = ct.ReactorNet([reactor])
+    solution = reactor.kinetics
+    simulator.atol = atol
+    simulator.rtol = rtol
+
+
+    median_conversion = (max_conversion + min_conversion) / 2
+    delta_t = initial_start_guess
+    target_species_index = solution.species_index(species)
+    starting_concentration = solution.concentrations[target_species_index]
+    conversion_history = pd.Series()
+    conversion_history[0.0] = 0.0
+    num_tries = 0
+    proper_conversion = False
+    while proper_conversion:
+        new_time = conversion_history.values()[-1] + delta_t
+        simulator.advance(new_time)
+        new_conversion = 1-solution.concentrations[target_species_index]/starting_concentration
+        if new_conversion > max_conversion:
+            # we overshot, now let's backtrack
+            overshoot_coefficient = (1-new_conversion)/(1-min_conversion)
+            solution.TPX = conditions
+            if simulator.time != 0.0:
+                simulator.set_initial_time = 0.0
+            simulator.advance(conversion_history.keys()[-1])
+            delta_t *= overshoot_coefficient
+        elif new_conversion < min_conversion:
+            # we undershot, let's continue
+            conversion_history[new_time] = new_conversion
+            conversion_remaining = median_conversion - new_conversion
+            conversion_progressed = conversion_history.values()[-1] - conversion_history.values()[-2]
+            delta_t *= conversion_remaining / conversion_progressed
+        else:
+            # we got in the correct range, let's terminate this loop!
+            conversion_history[new_time] = new_conversion
+            proper_conversion = True
+        num_tries += 1
+        if num_tries > max_tries:
+            raise Exception('The desired conversion range {0}-{1} was not reached after {2} iterations. The history of conversions is {3}.'.format(min_conversion, max_conversion,max_tries,conversion_history))
+    # setup data storage
+    outputs = {}
+    outputs['conditions'] = get_conditions_series(simulator,solution)
+    if output_species:
+        outputs['species'] = get_species_series(solution)
+    if output_reactions:
+        outputs['net_reactions'] = get_reaction_series(solution)
+    if output_directional_reactions:
+        outputs['directional_reactions'] = get_forward_and_reverse_reactions_series(solution)
+    if output_rop_roc:
+        outputs['rop'] = get_rop_and_roc_series(solution)
+
+    return outputs
+
 def run_simulation_till_conversion(solution, conditions, species, conversion,
                       condition_type = 'adiabatic-constant-volume',
                       output_species = True,
