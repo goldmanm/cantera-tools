@@ -219,9 +219,9 @@ def place_legend_outside_plot(axis,legend_entry= None, legend_icons=None):
 def legend_outside_kwargs(location = 'right'):
     
     if location == 'right':
-        return {bbox_to_anchor:(1.05, 1), loc:2, borderaxespad:0.}
+        return {'bbox_to_anchor':(1.05, 1), 'loc':2, 'borderaxespad':0.}
     elif location == 'bottom':
-        return {bbox_to_anchor:(0, -.15), loc:2, borderaxespad:0.}
+        return {'bbox_to_anchor':(0, -.15), 'loc':2, 'borderaxespad':0.}
     else:
         raise ValueError("Only legend locations right and bottom currently supported")
 def latexify_legend(legend_string,mode = 'math'):
