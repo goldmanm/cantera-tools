@@ -41,6 +41,8 @@ def general_changes():
     improve_dpi()
     use_tex()
 
+latex_preamble = [r"\usepackage[version=4]{mhchem}",r"\usepackage{amsmath}"]
+
 def use_tex():
     mpl.rcParams['text.usetex'] = True
     mpl.rcParams['text.latex.unicode'] = True
