@@ -233,7 +233,7 @@ def run_simulation_till_conversion(solution, conditions, species, conversion,
     `solution` = Cantera.Solution object
     `conditions` = tuple of temperature, pressure, and mole fraction initial 
                 species
-    `species` = a string of the species label to be used in conversion calculations
+    `species` = a string of the species label (or list of strings) to be used in conversion calculations
     `conversion` = a float of the fraction conversion to stop the simulation at
     `condition_type` = string describing the run type, currently supports 
                 'adiabatic-constant-volume' and 'constant-temperature-and-pressure'
@@ -254,13 +254,16 @@ def run_simulation_till_conversion(solution, conditions, species, conversion,
     simulator.atol = atol
     simulator.rtol = rtol
 
-    target_species_index = solution.species_index(species)
-    starting_concentration = solution.concentrations[target_species_index]
+    if isinstance(species,str):
+        target_species_indexes = [solution.species_index(species)]
+    else: # must be a list or tuple
+        target_species_indexes = [solution.species_index(s) for s in species]
+    starting_concentration = sum([solution.concentrations[target_species_index] for target_species_index in target_species_indexes])
     proper_conversion = False
     new_conversion = 0
     while not proper_conversion:
         simulator.step()
-        new_conversion = 1-solution.concentrations[target_species_index]/starting_concentration
+        new_conversion = 1-sum([solution.concentrations[target_species_index] for target_species_index in target_species_indexes])/starting_concentration
         if new_conversion > conversion:
             proper_conversion = True
     #print 'terminated at {0} with conversion {1}.'.format(simulator.time, new_conversion)
