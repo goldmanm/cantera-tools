@@ -164,10 +164,10 @@ def run_simulation(solution, conditions, times,
     solution.TPX = conditions
     if condition_type == 'adiabatic-constant-volume':
         reactor = ct.IdealGasReactor(solution)
-    if condition_type == 'constant-temperature-and-pressure':
+    elif condition_type == 'constant-temperature-and-pressure':
         reactor = ct.IdealGasConstPressureReactor(solution, energy='off')
     else:
-        raise NotImplementedError('only adiabatic constant volume is supported')
+        raise NotImplementedError('only "adiabatic-constant-volume" or "constant-temperature-and-pressure" is supported. {} input'.format(condition_type))
     simulator = ct.ReactorNet([reactor])
     solution = reactor.kinetics
     simulator.atol = atol
@@ -262,7 +262,11 @@ def run_simulation_till_conversion(solution, conditions, species, conversion,
     proper_conversion = False
     new_conversion = 0
     while not proper_conversion:
-        simulator.step()
+        try:
+            simulator.step()
+        except:
+            print('Might not be possible to achieve conversion at T={0}, P={1}, with concentrations of {2} obtaining a conversion of {3} at time {4} s.'.format(solution.T,solution.P,zip(solution.species_names,solution.X), new_conversion,simulator.time))
+            raise
         new_conversion = 1-sum([solution.concentrations[target_species_index] for target_species_index in target_species_indexes])/starting_concentration
         if new_conversion > conversion:
             proper_conversion = True
@@ -620,6 +624,8 @@ def branching_ratios(df, solution, compound):
     df = dataframe of run data
     solution = cantera solution object
     compound = species string which you want to identify
+    
+    This method only works on forward reactions
     """
     reaction_dataframe = weight_reaction_dataframe_by_stoich_coefficients(df,solution,compound)
     
