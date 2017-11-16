@@ -134,7 +134,7 @@ def eliminate_species_from_mechanism(species_list, kept_reactions,inert_species)
 # 1c. run mechanism
 ###################################
 
-def run_simulation(solution, conditions, times,
+def run_simulation(solution,  times, conditions=None,
                       condition_type = 'adiabatic-constant-volume',
                       output_species = True,
                       output_reactions = True,
@@ -161,7 +161,8 @@ def run_simulation(solution, conditions, times,
     `output_directional_reactions` = output a DataFrame of directional reaction rates
     `output_rop_roc` = output a DataFrame of species rates of consumption & production
     """
-    solution.TPX = conditions
+    if conditions is not None:
+        solution.TPX = conditions
     if condition_type == 'adiabatic-constant-volume':
         reactor = ct.IdealGasReactor(solution)
     elif condition_type == 'constant-temperature-and-pressure':
@@ -214,7 +215,7 @@ def run_simulation(solution, conditions, times,
 
     return outputs
 
-def run_simulation_till_conversion(solution, conditions, species, conversion,
+def run_simulation_till_conversion(solution, species, conversion,conditions=None,
                       condition_type = 'adiabatic-constant-volume',
                       output_species = True,
                       output_reactions = True,
@@ -242,7 +243,8 @@ def run_simulation_till_conversion(solution, conditions, species, conversion,
     `output_directional_reactions` = output a Series of directional reaction rates
     `output_rop_roc` = output a DataFrame of species rates of consumption & production
     """
-    solution.TPX = conditions
+    if conditions is not None:
+        solution.TPX = conditions
     if condition_type == 'adiabatic-constant-volume':
         reactor = ct.IdealGasReactor(solution)
     if condition_type == 'constant-temperature-and-pressure':
