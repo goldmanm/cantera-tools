@@ -264,11 +264,16 @@ def run_simulation_till_conversion(solution, species, conversion,conditions=None
     proper_conversion = False
     new_conversion = 0
     while not proper_conversion:
-        try:
-            simulator.step()
-        except:
-            print('Might not be possible to achieve conversion at T={0}, P={1}, with concentrations of {2} obtaining a conversion of {3} at time {4} s.'.format(solution.T,solution.P,zip(solution.species_names,solution.X), new_conversion,simulator.time))
-            raise
+        error_count = 0
+        while error_count >= 0:
+            try:
+                simulator.step()
+                error_count = -1
+            except:
+                error_count += 1
+                if error_count > 10:
+                    print('Might not be possible to achieve conversion at T={0}, P={1}, with concentrations of {2} obtaining a conversion of {3} at time {4} s.'.format(solution.T,solution.P,zip(solution.species_names,solution.X), new_conversion,simulator.time))
+                    raise
         new_conversion = 1-sum([solution.concentrations[target_species_index] for target_species_index in target_species_indexes])/starting_concentration
         if new_conversion > conversion:
             proper_conversion = True
