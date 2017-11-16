@@ -252,7 +252,6 @@ def run_simulation_till_conversion(solution, species, conversion,conditions=None
     else:
         raise NotImplementedError('only adiabatic constant volume is supported')
     simulator = ct.ReactorNet([reactor])
-    simulator.max_err_test_fails = 20 # make code more robust
     solution = reactor.kinetics
     simulator.atol = atol
     simulator.rtol = rtol
