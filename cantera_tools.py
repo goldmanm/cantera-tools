@@ -907,7 +907,7 @@ def obtain_cti_file_nicely_named(chemkinfilepath, readComments = True,
     make_string_labels_independent(species)
     for spec in species:
         if len(spec.molecule) == 0:
-            print spec
+            print(spec)
     # convert species
     ct_species = [spec.toCantera(useChemkinIdentifier = False) for spec in species]
     # convert reactions
