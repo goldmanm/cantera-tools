@@ -788,7 +788,7 @@ def consumption_pathways(solution,df,species='any',ignore_ignition=True, time = 
     """
     
     if time=='all':
-        df_reactions_weighted = integrate_data(find_reactions(solution, df,species), df['time (s)'])
+        df_reactions_weighted = integrate_data(find_reactions(solution, df,species), df.index)
         if ignore_ignition:
             last_index = remove_ignition(df).shape[0] 
         else:
@@ -798,7 +798,7 @@ def consumption_pathways(solution,df,species='any',ignore_ignition=True, time = 
         try:
             reactions_weighted = find_reactions(solution, df,species).loc[time,:]
         except KeyError:
-            reactions_weighted = find_reactions(solution, df,species).loc[return_nearest_time_index(time,df['time (s)'], index=False),:]
+            reactions_weighted = find_reactions(solution, df,species).loc[return_nearest_time_index(time,df.index, index=False),:]
     if species != 'any': # weight to stoich coefficients
         stoich_coeffs = [obtain_stoichiometry_of_species(solution, species, reaction) for reaction in reactions_weighted.index]
         stoich_coeff_dict = pd.Series(dict(zip(reactions_weighted.index,stoich_coeffs)))
