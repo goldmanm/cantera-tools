@@ -759,11 +759,17 @@ def return_nearest_time_index(desired_time,time_series,index=True):
     returns the index of the time_series. 
     If you want the actual time value, change index=False
     """
-    nearest_value = lambda value, array: np.argmin(abs(value-array))
+    # commented out due to error in mp.argmin
+    #nearest_value = lambda value, array: np.argmin(abs(value-array))
+    #if index:
+    #    return nearest_value(desired_time,time_series)
+    #return time_series[nearest_value(desired_time,time_series)]
+    deviation_list = abs(desired_time-time_series)
+    min_deviation = min(deviation_list)
+    index_value = list(deviation_list).index(min_deviation)
     if index:
-        return nearest_value(desired_time,time_series)
-    return time_series[nearest_value(desired_time,time_series)]
-
+        return index_value
+    return time_series[index_value]
 ###################################
 # 3b. output data analysis
 ###################################
