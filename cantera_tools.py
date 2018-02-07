@@ -561,8 +561,8 @@ def get_rop_and_roc_series(solution):
     production = pd.Series(__get_rxn_rate_dict(species,solution.creation_rates))
     consumption = pd.Series(__get_rxn_rate_dict(species,solution.destruction_rates))
     
-    assert isinstance(production.index,pd.indexes.base.Index)
-    assert isinstance(consumption.index,pd.indexes.base.Index)
+    assert isinstance(production.index,pd.Index)
+    assert isinstance(consumption.index,pd.Index)
     
     production.index = pd.MultiIndex.from_product([['production'],production.index])
     consumption.index = pd.MultiIndex.from_product([['consumption'],consumption.index])
