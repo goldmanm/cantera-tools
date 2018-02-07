@@ -830,38 +830,49 @@ def return_nearest_time_index(desired_time,time_series,index=True):
 # 3b. output data analysis
 ###################################
 
-def consumption_pathways(solution,df,species='any',ignore_ignition=True, time = 'all'):
+def consumption_pathways(solution,df,species, time = 'all'):
     """
-    returns the total rate of production 
-    for a particular species
-    over the entire simulation using
-    the forward difference approximation.
+    returns the total rate of production for a particular species at the specified
+    time(s). Postive values indicate production, negative values indicate consumption
     
-    Postive values indicate production, negative values indicate consumption
-    
-    time = 'all' uses average of values. giving a double returns the conpumption
-    pathways at one time
+    If multiple times are given or the keyword 'all' is used, the output is a DataFrame
+    with indexes the various times. If only one time is supplied, the output is a
+    Series. 
+
+    solution = cantera solution object
+    df = pandas dataframe of reactions
+    species = string of species
+    time = number describing the time points to determine consumption (or list of numbers)
     """
-    
+
     if time=='all':
-        df_reactions_weighted = integrate_data(find_reactions(solution, df,species), df.index)
-        if ignore_ignition:
-            last_index = remove_ignition(df).shape[0] 
-        else:
-            last_index = df.shape[0]-1
-        reactions_weighted = df_reactions_weighted[df.index<last_index].sum()
-    else:
-        try:
-            reactions_weighted = find_reactions(solution, df,species).loc[time,:]
-        except KeyError:
-            reactions_weighted = find_reactions(solution, df,species).loc[return_nearest_time_index(time,df.index, index=False),:]
-    if species != 'any': # weight to stoich coefficients
-        stoich_coeffs = [obtain_stoichiometry_of_species(solution, species, reaction) for reaction in reactions_weighted.index]
-        stoich_coeff_dict = pd.Series(dict(zip(reactions_weighted.index,stoich_coeffs)))
-        # pandas was having some bug, so manually rewrote the line below
-        #reactions_weighted *= stoich_coeff_dict
-        for index in stoich_coeff_dict.index:
-            reactions_weighted[index] *= stoich_coeff_dict[index]
+        time = list(df.index)
+    if isinstance(time,list):
+        # recursively run consumption_pathways
+        consumption_values = []
+        for t in time:
+            consumption_values.append(consumption_pathways(solution=solution,
+                                            df=df,
+                                            species=species,
+                                            time= t))
+        consumption_values = pd.DataFrame(consumption_values, index=time)
+        # sort by total sum of flux
+        sorted_index = consumption_values.sum('index').sort_values().keys()
+        return consumption_values[sorted_index]
+
+    # the time is not a list, return a pd.Series
+    try:
+        reactions_weighted = find_reactions(solution, df,species).loc[time,:]
+    except KeyError:
+        reactions_weighted = find_reactions(solution, df,species).loc[return_nearest_time_index(time,df.index, index=False),:]
+
+    # weight by stoichiometric_coefficients
+    stoich_coeffs = [obtain_stoichiometry_of_species(solution, species, reaction) for reaction in reactions_weighted.index]
+    stoich_coeff_dict = pd.Series(dict(zip(reactions_weighted.index,stoich_coeffs)))
+    # pandas was having some bug, so manually rewrote the line below
+    #reactions_weighted *= stoich_coeff_dict
+    for index in stoich_coeff_dict.index:
+        reactions_weighted[index] *= stoich_coeff_dict[index]
     return reactions_weighted.sort_values()
 
 def quasi_steady_state(df, species):
