@@ -221,6 +221,7 @@ def run_simulation_till_conversion(solution, species, conversion,conditions=None
                       output_reactions = True,
                       output_directional_reactions = False,
                       output_rop_roc = False,
+                      skip_data = 150,
                       atol = 1e-15,
                       rtol = 1e-9,):
     """
@@ -242,6 +243,8 @@ def run_simulation_till_conversion(solution, species, conversion,conditions=None
     `output_reactions` = output a Series of net reaction rates
     `output_directional_reactions` = output a Series of directional reaction rates
     `output_rop_roc` = output a DataFrame of species rates of consumption & production
+    `skip_data` = an integer which reduces storing each point of data.
+                    storage space scales as 1/`skip_data`
     """
     if conditions is not None:
         solution.TPX = conditions
@@ -255,14 +258,27 @@ def run_simulation_till_conversion(solution, species, conversion,conditions=None
     solution = reactor.kinetics
     simulator.atol = atol
     simulator.rtol = rtol
+    # setup data storage
+    outputs = {}
+    outputs['conditions'] = pd.DataFrame()
+    if output_species:
+        outputs['species'] = pd.DataFrame()
+    if output_reactions:
+        outputs['net_reactions'] = pd.DataFrame()
+    if output_directional_reactions:
+        outputs['directional_reactions'] = pd.DataFrame()
+    if output_rop_roc:
+        outputs['rop'] = pd.DataFrame()
 
     if isinstance(species,str):
         target_species_indexes = [solution.species_index(species)]
     else: # must be a list or tuple
         target_species_indexes = [solution.species_index(s) for s in species]
     starting_concentration = sum([solution.concentrations[target_species_index] for target_species_index in target_species_indexes])
+
     proper_conversion = False
     new_conversion = 0
+    skip_count = 1e8
     while not proper_conversion:
         error_count = 0
         while error_count >= 0:
@@ -277,18 +293,35 @@ def run_simulation_till_conversion(solution, species, conversion,conditions=None
         new_conversion = 1-sum([solution.concentrations[target_species_index] for target_species_index in target_species_indexes])/starting_concentration
         if new_conversion > conversion:
             proper_conversion = True
-    #print 'terminated at {0} with conversion {1}.'.format(simulator.time, new_conversion)
-    # setup data storage
-    outputs = {}
-    outputs['conditions'] = get_conditions_series(simulator,solution)
-    if output_species:
-        outputs['species'] = get_species_series(solution)
-    if output_reactions:
-        outputs['net_reactions'] = get_reaction_series(solution)
-    if output_directional_reactions:
-        outputs['directional_reactions'] = get_forward_and_reverse_reactions_series(solution)
-    if output_rop_roc:
-        outputs['rop'] = get_rop_and_roc_series(solution)
+        
+        # save data
+        if skip_count > skip_data or proper_conversion:
+            skip_count = 0
+            outputs['conditions'] = outputs['conditions'].append(
+                                    get_conditions_series(simulator,solution),
+                                    ignore_index = True)
+            if output_species:
+                outputs['species'] = outputs['species'].append(
+                                    get_species_series(solution),
+                                    ignore_index = True)
+            if output_reactions:
+                outputs['net_reactions'] = outputs['net_reactions'].append(
+                                    get_reaction_series(solution),
+                                    ignore_index = True)
+            if output_directional_reactions:
+                outputs['directional_reactions'] = outputs['directional_reactions'].append(
+                                    get_forward_and_reverse_reactions_series(solution),
+                                    ignore_index = True)
+            if output_rop_roc:
+                outputs['rop'] = outputs['rop'].append(
+                                    get_rop_and_roc_series(solution),
+                                    ignore_index = True)
+        skip_count += 1
+
+    # set indexes as time
+    time_vector = outputs['conditions']['time (s)']
+    for output in outputs.values():
+        output.set_index(time_vector,inplace=True)
 
     return outputs
 
