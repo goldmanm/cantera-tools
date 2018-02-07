@@ -582,7 +582,7 @@ def __get_rxn_rate_dict(reaction_equations, net_rates):
             rxn_dict[equation] = rate
     return rxn_dict
 
-def save_flux_diagrams(solution, conditions, times,
+def save_flux_diagrams(solution, times, conditions=None, 
                       condition_type = 'adiabatic-constant-volume',
                       path = '.', element = 'C', filename= 'flux_diagram',
                               filetype = 'png'):
@@ -590,7 +590,8 @@ def save_flux_diagrams(solution, conditions, times,
     This method is similar to run_simulation but it saves reaction path
     diagrams instead of returning objects.
     """
-    solution.TPX = conditions
+    if conditions is not None:
+        solution.TPX = conditions
     if condition_type == 'adiabatic-constant-volume':
         reactor = ct.IdealGasReactor(solution)
     elif condition_type == 'constant-temperature-and-pressure':
