@@ -140,6 +140,8 @@ def run_simulation(solution,  times, conditions=None,
                       output_reactions = True,
                       output_directional_reactions = False,
                       output_rop_roc = False,
+                      output_rxn_sensitivity = None,
+                      rxn_sensitivity_state = 'OH',
                       atol = 1e-15,
                       rtol = 1e-9):
     """
@@ -160,6 +162,9 @@ def run_simulation(solution,  times, conditions=None,
     `output_reactions` = output a DataFrame of net reaction rates
     `output_directional_reactions` = output a DataFrame of directional reaction rates
     `output_rop_roc` = output a DataFrame of species rates of consumption & production
+    `output_rxn_sensitivity` = list of rxn indexes to calculate sensitivity on
+    `rxn_sensitivity_state` = string of which state (T,P,X, etc.) to find sensitivity on
+
     """
     if conditions is not None:
         solution.TPX = conditions
@@ -184,9 +189,14 @@ def run_simulation(solution,  times, conditions=None,
         outputs['directional_reactions'] = pd.DataFrame()
     if output_rop_roc:
         outputs['rop'] = pd.DataFrame()
+    if output_rxn_sensitivity is not None:
+        for rxn in output_rxn_sensitivity:
+            reactor.add_sensitivity_reaction(rxn)
+        outputs['reaction_sensitivity'] = pd.DataFrame()
 
     for time in times:
         simulator.advance(time)
+        print time
         # save data
         outputs['conditions'] = outputs['conditions'].append(
                                 get_conditions_series(simulator,solution),
@@ -207,6 +217,13 @@ def run_simulation(solution,  times, conditions=None,
             outputs['rop'] = outputs['rop'].append(
                                 get_rop_and_roc_series(solution),
                                 ignore_index = True)
+        if output_rxn_sensitivity:
+            outputs['reaction_sensitivity'] = outputs['reaction_sensitivity'].append(
+                                get_rxn_sensitivity_series(simulator,
+                                                           solution,
+                                                           rxn_sensitivity_state,
+                                                           output_rxn_sensitivity),
+                                                           ignore_index=True)
 
     # set indexes as time
     time_vector = outputs['conditions']['time (s)']
@@ -420,6 +437,7 @@ def find_ignition_delay(solution, conditions=None,
                     outputs['rop'] = outputs['rop'].append(
                                         get_rop_and_roc_series(solution),
                                         ignore_index = True)
+            #print('storing data at {:.2f}s with temp of {:.2f}.'.format(simulator.time, reactor.T))
             
             # find ignition delay
             dTdt = (reactor.T - old_temp) / (simulator.time - old_time)
@@ -570,6 +588,36 @@ def get_rop_and_roc_series(solution):
     consumption.index = pd.MultiIndex.from_product([['consumption'],consumption.index])
      
     return pd.concat([production,consumption])
+
+def get_rxn_sensitivity_series(simulator, solution, rxns, condition='OH'):
+    """
+    returns a series with sensitivity coefficients for the following rxns related
+    to the state variable 'condition'.
+    """
+    series = pd.Series()
+    for sens_index, rxn_num in enumerate(rxns):
+        series[rxn_num] = simulator.sensitivity(condition,sens_index)
+    return series
+
+def convert_rxn_equations_to_indexes(solution, reaction_equations):
+    rxn_indexes = _get_rxn_indexes(solution)
+    indexes = []
+    for rxn_eq in reaction_equations:
+        indexes.extend(rxn_indexes[rxn_eq])
+    return indexes
+
+def _get_rxn_indexes(solution):
+    """
+    Given a kinetics object, returns a dictionary where the keys are reaction
+    equations and the values are list of the indexes that corresponds to the reaction.
+    """
+    rxn_indexes = {}
+    for index, equation in enumerate(solution.reaction_equations()):
+        if equation in rxn_indexes.keys():
+            rxn_indexes[equation].append(index)
+        else:
+            rxn_indexes[equation] = [index]
+    return rxn_indexes
 
 def __get_rxn_rate_dict(reaction_equations, net_rates):
     """
