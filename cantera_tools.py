@@ -388,6 +388,7 @@ def find_ignition_delay(solution, conditions=None,
             outputs['rop'] = pd.DataFrame()
 
     # run simulation
+    max_time = time_final
     old_time = -1
     old_temp = reactor.T
     max_dTdt = 0
@@ -397,8 +398,8 @@ def find_ignition_delay(solution, conditions=None,
         simulator.step()
         if data_storage > skip_data:
             data_storage = 1
-            if time_final == 500 and reactor.T > temp_final:
-                time_final = simulator.time * 1.03 # go just beyond the final temperature
+            if time_final == max_time and reactor.T > temp_final:
+                time_final = simulator.time * 1.01 # go just beyond the final temperature
             if output_profile:
                 outputs['conditions'] = outputs['conditions'].append(
                         get_conditions_series(simulator,solution),
@@ -429,9 +430,10 @@ def find_ignition_delay(solution, conditions=None,
             old_time = simulator.time
         data_storage += 1
     # set indexes as time
-    time_vector = outputs['conditions']['time (s)']
-    for output in outputs.values():
-        output.set_index(time_vector,inplace=True)
+    if output_profile:
+        time_vector = outputs['conditions']['time (s)']
+        for output in outputs.values():
+            output.set_index(time_vector,inplace=True)
     # save ignition_delay
     outputs['ignition_delay'] = max_dTdt_time
     return outputs
