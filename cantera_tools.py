@@ -221,8 +221,8 @@ def run_simulation(solution,  times, conditions=None,
             outputs['reaction_sensitivity'] = outputs['reaction_sensitivity'].append(
                                 get_rxn_sensitivity_series(simulator,
                                                            solution,
-                                                           rxn_sensitivity_state,
-                                                           output_rxn_sensitivity),
+                                                           output_rxn_sensitivity,
+                                                           rxn_sensitivity_state),
                                                            ignore_index=True)
 
     # set indexes as time
@@ -594,7 +594,7 @@ def get_rxn_sensitivity_series(simulator, solution, rxns, condition='OH'):
     returns a series with sensitivity coefficients for the following rxns related
     to the state variable 'condition'.
     """
-    series = pd.Series()
+    series = pd.Series(index=rxns)
     for sens_index, rxn_num in enumerate(rxns):
         series[rxn_num] = simulator.sensitivity(condition,sens_index)
     return series
