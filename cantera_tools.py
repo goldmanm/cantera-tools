@@ -675,7 +675,7 @@ def obtain_stoichiometry_of_species(solution, species, reaction):
         return product_stoich_coeff - reactant_stoich_coeff
     raise Exception('Species {} is not in reaction {}'.format(species,reaction))
 
-def branching_ratios(df, solution, compound):
+def branching_ratios(df, solution, compound, production = False):
     """
     This method looks at the consumption pathways of `compound` over
     all time points in the data set.
@@ -690,19 +690,22 @@ def branching_ratios(df, solution, compound):
     df = dataframe of run data
     solution = cantera solution object
     compound = species string which you want to identify
+    production = if True, shows the reactions forming species X
     
     This method only works on forward reactions
     """
     reaction_dataframe = weight_reaction_dataframe_by_stoich_coefficients(df,solution,compound)
     
-    #only keep consumption
-    consumption_terms = reaction_dataframe[reaction_dataframe < 0]
-    consumption_terms = consumption_terms.dropna('columns','all')
-    #consumption_terms = consumption_terms.fillna(0)
+    if not production:
+        #only keep consumption
+        consumption_terms = reaction_dataframe[reaction_dataframe < 0]
+        df = consumption_terms.dropna('columns','all')
+    else:
+        production_terms = reaction_dataframe[reaction_dataframe > 0]
+        df = production_terms.dropna('columns','all')
     
-    total = consumption_terms.sum('columns')
-    #print(total)
-    branching_ratios = consumption_terms.div(total,'index')
+    total = df.sum('columns')
+    branching_ratios = df.div(total,'index')
     branching_ratios = branching_ratios.fillna(0)
     
     #sort from most important
