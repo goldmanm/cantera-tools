@@ -767,29 +767,19 @@ def diff_data(df, differentiation_column):
     derivative.iloc[0] = 0
     return derivative
 
-def find_reactions(solution, df,species='any'):
+def find_reactions(solution, df,species):
     """
-    finds the reaction columns in the dataframe and returns them
-    if a string, species, is specified, it will only return reactions
-    with the matching species.
+    finds the reaction columns in the net_reaction dataframe which contain 
+    the species specified and returns them.
     """
-    # find reaction columns
-    df_reactions = df.loc[:,['=' in column for column in df.columns]]
-    if species =='any':
-        return df_reactions
-    # not needed since using solution object
-    #string = _prepare_string_for_re_processing(species)
-    #expression = r'(\A|\s)%s(\Z|\s)' %(string)
-    #df_my_reactions = df_reactions.loc[:,[re.compile(expression).search(column) != None for column in df_reactions.columns]]
     included_columns = []
-    reaction_strings = solution.reaction_equations()
-    #print df_reactions.shape
-    #print len(reaction_strings)
-    for index, rxn_name in enumerate(reaction_strings):
-        if solution.product_stoich_coeff(species,index) !=0 or solution.reactant_stoich_coeff(species,index) !=0:
+    rxn_string_to_rxn_index = dict(zip(solution.reaction_equations(),range(solution.n_reactions)))
+    for rxn_name in df.columns:
+        sln_index = rxn_string_to_rxn_index[rxn_name]
+        if solution.product_stoich_coeff(species,sln_index) !=0 or \
+                    solution.reactant_stoich_coeff(species,sln_index) !=0:
             included_columns.append(rxn_name)
-    #print included_columns
-    df_my_reactions = df_reactions[included_columns]
+    df_my_reactions = df[included_columns]
     
     if df_my_reactions.empty:
         raise Exception('No reactions found for species {}'.format(species))
