@@ -50,15 +50,41 @@ def get_initial_mole_fractions(stoich_ratio,
         return normalized_mole_fractions
 
 
-def create_mechanism(full_model_file_path,kept_reaction_equations='all',non_reactive_species = ['AR','N2','HE']):
+def create_mechanism(full_model_file_path,kept_reaction_equations='all', remove_reaction_equations=None,
+                     non_reactive_species = ['AR','N2','HE']):
     """
-    input the full model and a list of reaction equations that you'd like to keep.
+    This is a convenience method for reducing mechanisms when reading cantera
+    files.
+
+    input the full model and a list of reaction equations that you'd like to keep
+    or a list of reaction equations to remove.
+
+    This method should retain or remove all instances of the reactions
+
     returns a Cantera.Solution object of the mechanism with only the cooresponding
     reactions and their species.
     """
     desired_file = full_model_file_path
     spec = ct.Species.listFromFile(desired_file)
     rxns = ct.Reaction.listFromFile(desired_file)
+
+    if remove_reaction_equations is not None:
+        if isinstance(remove_reaction_equations,list):
+            rxn_index = 0 
+            while rxn_index < len(rxns):
+
+                rxn_eq = rxns[rxn_index].equation
+
+                if rxn_eq in remove_reaction_equations:
+                    del rxns[rxn_index]
+                else:
+                    rxn_index += 1
+            reduced_species = eliminate_species_from_mechanism(spec,rxns,non_reactive_species)
+            return ct.Solution(thermo='IdealGas', kinetics='GasKinetics',
+                      species=reduced_species, reactions=rxns)
+        else:
+            raise TypeError('remove reaction equations must be a list if specified. It is currently {}'.format(remove_reaction_equations))
+
 
     if kept_reaction_equations=='all':
         return ct.Solution(full_model_file_path)
