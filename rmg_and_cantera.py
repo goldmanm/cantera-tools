@@ -37,6 +37,7 @@ def obtain_cti_file_nicely_named(chemkinfilepath, readComments = True,
     from rmgpy.chemkin import loadChemkinFile
     import os
     import soln2cti
+    import cantera as ct
 
     chemkinPath = os.path.join(chemkinfilepath, original_ck_file)
     speciesDictPath = os.path.join(chemkinfilepath,'species_dictionary.txt')
