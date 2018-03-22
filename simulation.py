@@ -152,7 +152,8 @@ def run_simulation(solution,  times, conditions=None,
                       output_directional_reactions = False,
                       output_rop_roc = False,
                       atol = 1e-15,
-                      rtol = 1e-9):
+                      rtol = 1e-9,
+                      temperature_values=None):
     """
     This method iterates through the cantera solution object and outputs information
     about the simulation as a pandas.DataFrame object.
@@ -163,14 +164,23 @@ def run_simulation(solution,  times, conditions=None,
     
     `solution` = Cantera.Solution object
     `conditions` = tuple of temperature, pressure, and mole fraction initial 
-                species
+                species (will be deprecated. Set parameters before running)
     `times` = an iterable of times which you would like to store information in
-    `condition_type` = string describing the run type, currently supports 
-                'adiabatic-constant-volume' and 'constant-temperature-and-pressure'
+    `condition_type` = string describing the run type
     `output_species` = output a DataFrame of species' concentrations
     `output_reactions` = output a DataFrame of net reaction rates
     `output_directional_reactions` = output a DataFrame of directional reaction rates
     `output_rop_roc` = output a DataFrame of species rates of consumption & production
+
+    condition_types supported
+    #########################
+    'adiabatic-constant-volume' - assumes no heat transfer and no volume change
+    'constant-temperature-and-pressure' - no solving energy equation or changing
+                            rate constants
+    'specified-temperature-constant-volume' - the temperature profile specified
+                            `temperature_values`, which corresponds to the
+                            input `times`, alters the temperature right before
+                            the next time step is taken. Constant volume is assumed.
     """
     if conditions is not None:
         solution.TPX = conditions
@@ -178,6 +188,12 @@ def run_simulation(solution,  times, conditions=None,
         reactor = ct.IdealGasReactor(solution)
     elif condition_type == 'constant-temperature-and-pressure':
         reactor = ct.IdealGasConstPressureReactor(solution, energy='off')
+    elif condition_type == 'specified-temperature-constant-volume':
+        reactor = ct.IdealGasReactor(solution, energy='off')
+        if temperature_values is None:
+            raise AttributeError('Must specify temperature with `temperature_values` parameter')
+        elif len(times) != len(temperature_values):
+            raise AttributeError('`times` (len {0}) and `temperature_values` (len {1}) must have the same length.'.format(len(times),len(temperature_values)))
     else:
         raise NotImplementedError('only "adiabatic-constant-volume" or "constant-temperature-and-pressure" is supported. {} input'.format(condition_type))
     simulator = ct.ReactorNet([reactor])
@@ -196,7 +212,9 @@ def run_simulation(solution,  times, conditions=None,
     if output_rop_roc:
         outputs['rop'] = pd.DataFrame()
 
-    for time in times:
+    for time_index, time in enumerate(times):
+        if condition_type == 'specified-temperature-constant-volume':
+            solution.TD = temperature_values[time_index], solution.density
         simulator.advance(time)
         # save data
         outputs['conditions'] = outputs['conditions'].append(
