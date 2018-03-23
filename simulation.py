@@ -177,6 +177,8 @@ def run_simulation(solution,  times, conditions=None,
     'adiabatic-constant-volume' - assumes no heat transfer and no volume change
     'constant-temperature-and-pressure' - no solving energy equation or changing
                             rate constants
+    'constant-temperature-and-volume' - no solving energy equation but allows
+                            for pressure to change with reactions
     'specified-temperature-constant-volume' - the temperature profile specified
                             `temperature_values`, which corresponds to the
                             input `times`, alters the temperature right before
@@ -188,6 +190,8 @@ def run_simulation(solution,  times, conditions=None,
         reactor = ct.IdealGasReactor(solution)
     elif condition_type == 'constant-temperature-and-pressure':
         reactor = ct.IdealGasConstPressureReactor(solution, energy='off')
+    elif condition_type == 'constant-temperature-and-volume':
+        reactor = ct.IdealGasConstPressureReactor(solution, energy='on')
     elif condition_type == 'specified-temperature-constant-volume':
         reactor = ct.IdealGasReactor(solution, energy='off')
         if temperature_values is None:
@@ -195,7 +199,9 @@ def run_simulation(solution,  times, conditions=None,
         elif len(times) != len(temperature_values):
             raise AttributeError('`times` (len {0}) and `temperature_values` (len {1}) must have the same length.'.format(len(times),len(temperature_values)))
     else:
-        raise NotImplementedError('only "adiabatic-constant-volume" or "constant-temperature-and-pressure" is supported. {} input'.format(condition_type))
+        supported_types = ['adiabatic-constant-volume','constant-temperature-and-pressure',
+                           'constant-temperature-and-volume','specified-temperature-constant-volume']
+        raise NotImplementedError('only {0} are supported. {1} input'.format(supported_types, condition_type))
     simulator = ct.ReactorNet([reactor])
     solution = reactor.kinetics
     simulator.atol = atol
