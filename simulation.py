@@ -215,6 +215,11 @@ def run_simulation(solution,  times, conditions=None,
     for time_index, time in enumerate(times):
         if condition_type == 'specified-temperature-constant-volume':
             solution.TD = temperature_values[time_index], solution.density
+            reactor = ct.IdealGasReactor(solution, energy='off')
+            simulator = ct.ReactorNet([reactor])
+            solution = reactor.kinetics
+            simulator.atol = atol
+            simulator.rtol = rtol
         simulator.advance(time)
         # save data
         outputs['conditions'] = outputs['conditions'].append(
