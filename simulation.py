@@ -514,7 +514,9 @@ def get_data_series(simulator,solution, basics= ['time','temperature','pressure'
                       add_rxns = False, reaction_names='all'):
     """
     a wrapper function of `get_conditions_series`, `get_species_series`, and 
-    `get_reaction_series`, which may be depreciated in the future
+    `get_reaction_series`, which may be depreciated in the future.
+
+    Deprecated
     """
 
     conditions = get_conditions_series(simulator,solution, basics)
