@@ -191,7 +191,7 @@ def run_simulation(solution,  times, conditions=None,
     elif condition_type == 'constant-temperature-and-pressure':
         reactor = ct.IdealGasConstPressureReactor(solution, energy='off')
     elif condition_type == 'constant-temperature-and-volume':
-        reactor = ct.IdealGasConstPressureReactor(solution, energy='on')
+        reactor = ct.IdealGasReactor(solution, energy='off')
     elif condition_type == 'specified-temperature-constant-volume':
         reactor = ct.IdealGasReactor(solution, energy='off')
         if temperature_values is None:
