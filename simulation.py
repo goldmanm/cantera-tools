@@ -231,7 +231,7 @@ def run_simulation(solution,  times, conditions=None,
         simulator.advance(time)
         # save data
         outputs['conditions'] = outputs['conditions'].append(
-                                get_conditions_series(simulator,solution),
+                                get_conditions_series(simulator,reactor,solution),
                                 ignore_index = True)
         if output_species:
             outputs['species'] = outputs['species'].append(
@@ -340,7 +340,7 @@ def run_simulation_till_conversion(solution, species, conversion,conditions=None
         if skip_count > skip_data or proper_conversion:
             skip_count = 0
             outputs['conditions'] = outputs['conditions'].append(
-                                    get_conditions_series(simulator,solution),
+                                    get_conditions_series(simulator,reactor,solution),
                                     ignore_index = True)
             if output_species:
                 outputs['species'] = outputs['species'].append(
@@ -444,7 +444,7 @@ def find_ignition_delay(solution, conditions=None,
                 time_final = simulator.time * 1.01 # go just beyond the final temperature
             if output_profile:
                 outputs['conditions'] = outputs['conditions'].append(
-                        get_conditions_series(simulator,solution),
+                        get_conditions_series(simulator,reactor,solution),
                         ignore_index = True)
                 if output_species:
                     outputs['species'] = outputs['species'].append(
@@ -531,7 +531,8 @@ def get_data_series(simulator,solution, basics= ['time','temperature','pressure'
 
     return conditions
 
-def get_conditions_series(simulator, solution, basics= ['time','temperature','pressure','density']):
+def get_conditions_series(simulator, reactor, solution,
+                          basics= ['time','temperature','pressure','density','volume','enthalpy','internal energy']):
     """
     returns the current conditions of a Solution object contianing ReactorNet
     object (simulator) as a pd.Series.
@@ -548,6 +549,7 @@ def get_conditions_series(simulator, solution, basics= ['time','temperature','pr
     * volume
     * cp (constant pressure heat capacity)
     * cv (constant volume heat capacity)
+    * enthalpy
     """
     conditions = pd.Series()
     # add regular conditions
@@ -556,15 +558,19 @@ def get_conditions_series(simulator, solution, basics= ['time','temperature','pr
     if 'temperature' in basics:
         conditions['temperature (K)'] = solution.T
     if 'pressure' in basics:
-        conditions['pressure (Pa)'] = solution.P 
+        conditions['pressure (Pa)'] = solution.P
     if 'density' in basics:
         conditions['density (kmol/m3)'] = solution.density_mole
     if 'volume' in basics:
-        conditions['volume (m3)'] = solution.volume_mole
+        conditions['volume (m3)'] = reactor.volume
     if 'cp' in basics:
         conditions['heat capacity, cp (J/kmol/K)'] = solution.cp_mole
     if 'cv' in basics:
         conditions['heat capacity, cv (J/kmol/K)'] = solution.cv_mole
+    if 'enthalpy' in basics:
+        conditions['enthalpy (J/kg)'] = solution.enthalpy_mass
+    if 'internal energy' in basics:
+        conditions['internal energy (J/kg)'] = solution.int_energy_mass
     return conditions
 
 def get_species_series(solution, species_names = 'all'):
