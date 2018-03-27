@@ -226,6 +226,8 @@ def run_simulation(solution,  times, conditions=None,
             solution = reactor.kinetics
             simulator.atol = atol
             simulator.rtol = rtol
+            if time_index > 0:
+                simulator.set_initial_time(times[time_index-1])
         simulator.advance(time)
         # save data
         outputs['conditions'] = outputs['conditions'].append(
