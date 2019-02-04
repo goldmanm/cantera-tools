@@ -215,9 +215,13 @@ def find_reactions(solution, df,species):
     rxn_string_to_rxn_index = dict(zip(solution.reaction_equations(),range(solution.n_reactions)))
     for rxn_name in df.columns:
         sln_index = rxn_string_to_rxn_index[rxn_name]
-        if solution.product_stoich_coeff(species,sln_index) !=0 or \
-                    solution.reactant_stoich_coeff(species,sln_index) !=0:
-            included_columns.append(rxn_name)
+        try:
+            if solution.product_stoich_coeff(species,sln_index) !=0 or \
+                        solution.reactant_stoich_coeff(species,sln_index) !=0:
+                included_columns.append(rxn_name)
+        except KeyError:
+            print("Error obtained in find_reactions,\ncheck to ensure the columns in `df`\ncorrespond to the reactions in `solution`")
+            raise
     df_my_reactions = df[included_columns]
     
     if df_my_reactions.empty:
