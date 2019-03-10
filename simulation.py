@@ -673,7 +673,7 @@ def save_flux_diagram(kinetics, path = '.', element = 'C', filename= 'flux_diagr
     import os
 
     diagram = ct.ReactionPathDiagram(kinetics, element)
-    diagram.label_threshold = 0.000001
+    diagram.label_threshold = 0.00001
 
     dot_file = 'temp.dot'
     img_file = filename + '.' + filetype
@@ -685,7 +685,7 @@ def save_flux_diagram(kinetics, path = '.', element = 'C', filename= 'flux_diagr
     error = os.system('dot {0} -T{2} -o{1} -Gdpi=200'.format(dot_file, img_path,filetype))
 
     if error:
-        raise OSError('dot was not able to create the desired image')
+        raise OSError('dot was not able to create the desired image. error number: {}. Do you have graphviz installed'.format(error))
     else:
         print("Wrote graphviz output file to '{0}'.".format(img_path))
     os.remove(dot_file)
