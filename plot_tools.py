@@ -296,3 +296,9 @@ def plot_multiple_comparisons(data,dictionary_of_plots,x_data = None,
         axis.set_ylabel(plot_name + ' (' + yunit+ ')')
     axes[-1].set_xlabel(xlabel)
     return f
+
+
+def add_lines_to_contourf(contour_obj):
+    for col in  contour_obj.collections:
+        col.set_linewidth(1.5)
+        col.set_edgecolor(col.get_facecolor())
