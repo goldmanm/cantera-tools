@@ -299,6 +299,19 @@ def plot_multiple_comparisons(data,dictionary_of_plots,x_data = None,
 
 
 def add_lines_to_contourf(contour_obj):
+    """
+    This method fixes odd white space rendering of some
+    PDF engines by applying the fill color to the line
+    of every drawable in a collection. This works on most
+    collection objects output by methods. Here is an example:
+
+    ```
+    f, ax = plt.subplots()
+    heatmap_coll = seaborn.heatmap(....)
+    add_lines_to_contourf(heatmap_coll)
+    f.savefig('hot.pdf')
+    ```
+    """
     for col in  contour_obj.collections:
         col.set_linewidth(1.5)
         col.set_edgecolor(col.get_facecolor())
