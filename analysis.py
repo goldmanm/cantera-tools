@@ -44,7 +44,7 @@ def branching_ratios(df, solution, compound, production = False):
     
     #sort from most important
     importance_index = branching_ratios.sum('index').sort_values(ascending=False)
-    branching_ratios = branching_ratios.reindex_axis(importance_index.index,axis='columns')
+    branching_ratios = branching_ratios.reindex(importance_index.index,axis='columns')
 
     return branching_ratios
 
